@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Brain, 
   Clock, 
@@ -18,12 +19,18 @@ import AuthModal from '../components/auth/AuthModal';
 
 const HomePage: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, hasCompletedOnboarding } = useAuth();
+  const navigate = useNavigate();
 
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
     if (user) {
-      // Navigate to dashboard or onboarding
-      console.log('User is logged in, navigate to dashboard');
+      // Check if user has completed onboarding
+      const completed = await hasCompletedOnboarding();
+      if (completed) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
     } else {
       setIsAuthModalOpen(true);
     }
@@ -57,7 +64,7 @@ const HomePage: React.FC = () => {
                   className="btn btn-primary text-lg"
                 >
                   <Play className="w-6 h-6 mr-3" />
-                  {user ? 'Go to Dashboard' : 'Start Your First Session'}
+                  {user ? 'Continue Learning' : 'Start Your First Session'}
                 </button>
                 <button className="btn btn-secondary text-lg">
                   <MessageCircle className="w-6 h-6 mr-3" />
@@ -153,7 +160,7 @@ const HomePage: React.FC = () => {
 
               <div className="card text-center animate-slide-up group">
                 <div className="w-20 h-20 bg-gruvbox-blue/20 border border-gruvbox-blue/30 rounded-xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Shield className="w-10 h-10 text-gruvbox-blue" />
+                  <Shield className="w-6 h-6 text-gruvbox-blue" />
                 </div>
                 <h3 className="text-2xl font-bold text-gruvbox-fg0 mb-4">Privacy First</h3>
                 <p className="text-gruvbox-fg3 leading-relaxed">
@@ -327,7 +334,7 @@ const HomePage: React.FC = () => {
                   className="btn bg-gruvbox-dark text-gruvbox-orange hover:bg-gruvbox-dark-soft text-lg shadow-xl"
                 >
                   <Play className="w-6 h-6 mr-3" />
-                  {user ? 'Go to Dashboard' : 'Start Your Free Session Now'}
+                  {user ? 'Continue Learning' : 'Start Your Free Session Now'}
                 </button>
                 <button className="btn border-2 border-gruvbox-dark text-gruvbox-dark hover:bg-gruvbox-dark hover:text-gruvbox-orange text-lg">
                   <MessageCircle className="w-6 h-6 mr-3" />
