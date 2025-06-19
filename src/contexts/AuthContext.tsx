@@ -33,6 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -112,21 +113,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      console.log('Signing out user...');
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Sign out error:', error);
-        throw error;
-      }
-      console.log('Sign out successful');
+      console.log('Starting sign out process...');
       
-      // Clear local state immediately
+      // Clear local state first for immediate UI feedback
       setUser(null);
       setProfile(null);
       setSession(null);
+      
+      // Then call Supabase sign out
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Supabase sign out error:', error);
+        // Don't throw here - we've already cleared local state
+      } else {
+        console.log('Supabase sign out successful');
+      }
+      
+      console.log('Sign out process completed');
     } catch (error) {
       console.error('Error during sign out:', error);
-      throw error;
+      // Even if there's an error, we've cleared local state
     }
   };
 
