@@ -14,13 +14,26 @@ const Navbar: React.FC = () => {
   
   const { user, profile, signOut } = useAuth();
 
+  // Reset menu states when user changes
+  useEffect(() => {
+    if (!user) {
+      console.log('🔄 User signed out, resetting menu states');
+      setIsUserMenuOpen(false);
+      setIsMenuOpen(false);
+      setIsSigningOut(false);
+    }
+  }, [user]);
+
   const handleAuthClick = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
   };
 
   const handleSignOut = async () => {
-    if (isSigningOut) return; // Prevent multiple clicks
+    if (isSigningOut) {
+      console.log('⏳ Sign out already in progress, ignoring click');
+      return;
+    }
     
     try {
       console.log('🚪 Starting sign out from navbar...');
@@ -39,8 +52,10 @@ const Navbar: React.FC = () => {
       console.log('✅ Sign out completed successfully');
     } catch (error) {
       console.error('❌ Error during sign out:', error);
-      // Even if there's an error, navigate to home
+      // Even if there's an error, navigate to home and reset state
       navigate('/');
+      setIsUserMenuOpen(false);
+      setIsMenuOpen(false);
     } finally {
       setIsSigningOut(false);
     }
@@ -61,9 +76,16 @@ const Navbar: React.FC = () => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
   }, [isUserMenuOpen]);
+
+  // Close mobile menu when user changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [user]);
 
   return (
     <>
@@ -93,36 +115,38 @@ const Navbar: React.FC = () => {
               {user ? (
                 <div className="relative user-menu-container">
                   <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center space-x-2 text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors"
+                    onClick={() => !isSigningOut && setIsUserMenuOpen(!isUserMenuOpen)}
+                    className={`flex items-center space-x-2 text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors ${
+                      isSigningOut ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     disabled={isSigningOut}
                   >
                     <div className="w-8 h-8 bg-gruvbox-orange rounded-full flex items-center justify-center">
                       <User className="w-5 h-5 text-gruvbox-dark" />
                     </div>
-                    <span className="font-medium">{profile?.full_name || 'User'}</span>
+                    <span className="font-medium">
+                      {isSigningOut ? 'Signing out...' : (profile?.full_name || 'User')}
+                    </span>
                   </button>
                   
-                  {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gruvbox-dark-soft border border-gruvbox-gray-244/20 rounded-lg shadow-xl py-2">
+                  {isUserMenuOpen && !isSigningOut && (
+                    <div className="absolute right-0 mt-2 w-48 bg-gruvbox-dark-soft border border-gruvbox-gray-244/20 rounded-lg shadow-xl py-2 z-50">
                       <div className="px-4 py-2 border-b border-gruvbox-gray-244/20">
-                        <p className="text-sm text-gruvbox-fg2">{profile?.email}</p>
+                        <p className="text-sm text-gruvbox-fg2 truncate">{profile?.email}</p>
                       </div>
                       <button
                         onClick={handleDashboardClick}
                         className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2"
-                        disabled={isSigningOut}
                       >
                         <Settings className="w-4 h-4" />
                         <span>Dashboard</span>
                       </button>
                       <button
                         onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2 disabled:opacity-50"
+                        className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+                        <span>Sign Out</span>
                       </button>
                     </div>
                   )}
@@ -150,6 +174,7 @@ const Navbar: React.FC = () => {
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors"
+                disabled={isSigningOut}
               >
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -176,9 +201,11 @@ const Navbar: React.FC = () => {
                       <div className="w-8 h-8 bg-gruvbox-orange rounded-full flex items-center justify-center">
                         <User className="w-5 h-5 text-gruvbox-dark" />
                       </div>
-                      <div>
-                        <p className="font-medium text-gruvbox-fg1">{profile?.full_name || 'User'}</p>
-                        <p className="text-sm text-gruvbox-fg3">{profile?.email}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gruvbox-fg1 truncate">
+                          {isSigningOut ? 'Signing out...' : (profile?.full_name || 'User')}
+                        </p>
+                        <p className="text-sm text-gruvbox-fg3 truncate">{profile?.email}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -187,6 +214,7 @@ const Navbar: React.FC = () => {
                         className="btn btn-secondary w-full"
                         disabled={isSigningOut}
                       >
+                        <Settings className="w-4 h-4 mr-2" />
                         Dashboard
                       </button>
                       <button
@@ -194,6 +222,7 @@ const Navbar: React.FC = () => {
                         disabled={isSigningOut}
                         className="btn btn-secondary w-full disabled:opacity-50"
                       >
+                        <LogOut className="w-4 h-4 mr-2" />
                         {isSigningOut ? 'Signing out...' : 'Sign Out'}
                       </button>
                     </div>
