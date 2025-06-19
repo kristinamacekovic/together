@@ -16,7 +16,8 @@ import {
   Settings,
   CheckCircle,
   Plus,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 interface EditableField {
@@ -35,7 +36,6 @@ const DashboardPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const mountedRef = useRef(true);
-  const loadingRef = useRef(false);
 
   // Form options (same as onboarding)
   const studySubjects = [
@@ -84,8 +84,12 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     mountedRef.current = true;
     
-    if (user && !loadingRef.current) {
+    if (user) {
+      console.log('🚀 Dashboard: User found, starting data fetch...');
       fetchUserData();
+    } else {
+      console.log('❌ Dashboard: No user found');
+      setLoading(false);
     }
 
     return () => {
@@ -94,101 +98,122 @@ const DashboardPage: React.FC = () => {
   }, [user]);
 
   const fetchUserData = async () => {
-    if (!user || loadingRef.current) return;
-    
-    loadingRef.current = true;
+    if (!user) {
+      console.log('❌ No user available for data fetch');
+      setLoading(false);
+      return;
+    }
     
     try {
-      console.log('📊 Fetching dashboard data for:', user.id);
+      console.log('📊 Starting dashboard data fetch for user:', user.id);
       setError('');
       setLoading(true);
       
-      // Create timeout promise
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout after 8 seconds')), 8000)
-      );
-
-      // Fetch initial form data
-      const formPromise = supabase
-        .from('initial_forms')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      // Fetch goals
-      const goalsPromise = supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Set a reasonable timeout
+      const TIMEOUT_MS = 10000; // 10 seconds
+      
+      // Create abort controller for cleanup
+      const abortController = new AbortController();
+      
+      // Set timeout
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, TIMEOUT_MS);
 
       try {
-        // Race against timeout
+        // Fetch initial form data with timeout
+        console.log('📝 Fetching initial form data...');
+        const formPromise = supabase
+          .from('initial_forms')
+          .select('*')
+          .eq('user_id', user.id)
+          .abortSignal(abortController.signal)
+          .single();
+
+        // Fetch goals with timeout  
+        console.log('🎯 Fetching goals data...');
+        const goalsPromise = supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', user.id)
+          .abortSignal(abortController.signal)
+          .order('created_at', { ascending: false });
+
+        // Execute both queries
         const [formResult, goalsResult] = await Promise.all([
-          Promise.race([formPromise, timeoutPromise]),
-          Promise.race([goalsPromise, timeoutPromise])
+          formPromise,
+          goalsPromise
         ]);
 
-        if (!mountedRef.current) return;
+        // Clear timeout since we got results
+        clearTimeout(timeoutId);
+
+        if (!mountedRef.current) {
+          console.log('🚫 Component unmounted, skipping state updates');
+          return;
+        }
 
         // Handle form data
-        const { data: formData, error: formError } = formResult as any;
-        if (formError) {
-          if (formError.code === 'PGRST116') {
-            console.log('📝 No onboarding data found - showing empty form');
+        console.log('📝 Processing form result...');
+        if (formResult.error) {
+          if (formResult.error.code === 'PGRST116') {
+            console.log('ℹ️ No onboarding data found - user can fill it in');
             setHasOnboardingData(false);
             setInitialForm(null);
           } else {
-            console.error('❌ Error fetching form data:', formError);
-            setHasOnboardingData(false);
-            setInitialForm(null);
+            console.error('❌ Form data error:', formResult.error);
+            throw new Error(`Failed to load profile data: ${formResult.error.message}`);
           }
         } else {
-          console.log('✅ Onboarding data loaded');
-          setInitialForm(formData);
+          console.log('✅ Form data loaded successfully');
+          setInitialForm(formResult.data);
           setHasOnboardingData(true);
         }
 
         // Handle goals data
-        const { data: goalsData, error: goalsError } = goalsResult as any;
-        if (goalsError) {
-          console.error('❌ Error fetching goals:', goalsError);
-          setGoals([]);
+        console.log('🎯 Processing goals result...');
+        if (goalsResult.error) {
+          console.error('❌ Goals data error:', goalsResult.error);
+          throw new Error(`Failed to load goals: ${goalsResult.error.message}`);
         } else {
-          console.log('✅ Goals loaded:', goalsData?.length || 0);
-          setGoals(goalsData || []);
+          console.log('✅ Goals loaded successfully:', goalsResult.data?.length || 0, 'goals');
+          setGoals(goalsResult.data || []);
         }
 
-      } catch (timeoutError) {
-        console.error('⏰ Request timeout:', timeoutError);
-        if (mountedRef.current) {
-          setError('Loading took too long. Please refresh the page.');
-          // Still set defaults so page renders
-          setHasOnboardingData(false);
-          setInitialForm(null);
-          setGoals([]);
+        console.log('🎉 Dashboard data fetch completed successfully');
+
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          console.error('⏰ Dashboard data fetch timed out');
+          throw new Error('Loading took too long. Please check your connection and try again.');
+        } else {
+          console.error('❌ Dashboard data fetch error:', fetchError);
+          throw fetchError;
         }
       }
 
-    } catch (error) {
-      console.error('❌ Error in fetchUserData:', error);
+    } catch (error: any) {
+      console.error('💥 Error in fetchUserData:', error);
       if (mountedRef.current) {
-        setError('Failed to load dashboard data.');
+        setError(error.message || 'Failed to load dashboard data. Please try again.');
+        // Set defaults so the page still renders
         setHasOnboardingData(false);
         setInitialForm(null);
         setGoals([]);
       }
     } finally {
       if (mountedRef.current) {
+        console.log('🏁 Dashboard data fetch finished, setting loading to false');
         setLoading(false);
-        loadingRef.current = false;
       }
     }
   };
 
   const retryLoading = () => {
+    console.log('🔄 Retrying dashboard data fetch...');
     setError('');
-    loadingRef.current = false;
     fetchUserData();
   };
 
@@ -208,6 +233,8 @@ const DashboardPage: React.FC = () => {
 
     setSaving(true);
     try {
+      console.log('💾 Saving field:', editableField.field, 'with value:', editValue);
+      
       if (hasOnboardingData && initialForm) {
         // Update existing record
         const { error } = await supabase
@@ -219,6 +246,7 @@ const DashboardPage: React.FC = () => {
 
         // Update local state
         setInitialForm(prev => prev ? { ...prev, [editableField.field]: editValue } : null);
+        console.log('✅ Field updated successfully');
       } else {
         // Create new record with this field
         const newFormData = {
@@ -242,12 +270,14 @@ const DashboardPage: React.FC = () => {
         // Update local state
         setInitialForm(data);
         setHasOnboardingData(true);
+        console.log('✅ New form record created successfully');
       }
 
       setEditableField(null);
       setEditValue('');
-    } catch (error) {
-      console.error('Error updating field:', error);
+    } catch (error: any) {
+      console.error('❌ Error saving field:', error);
+      setError(`Failed to save ${editableField.field}: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -284,27 +314,29 @@ const DashboardPage: React.FC = () => {
     return !value || value === '';
   };
 
+  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-gruvbox-orange border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gruvbox-fg2">Loading your dashboard...</p>
+          <p className="text-gruvbox-fg2 text-lg font-medium">Loading your dashboard...</p>
           <p className="text-sm text-gruvbox-fg4 mt-2">This should only take a moment</p>
         </div>
       </div>
     );
   }
 
+  // Show error state with retry option
   if (error) {
     return (
-      <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center">
+      <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-gruvbox-red/20 border border-gruvbox-red/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="w-8 h-8 text-gruvbox-red-bright" />
+          <div className="w-16 h-16 bg-gruvbox-red/20 border border-gruvbox-red/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-gruvbox-red-bright" />
           </div>
-          <h2 className="text-xl font-bold text-gruvbox-fg0 mb-2">Unable to Load Dashboard</h2>
-          <p className="text-gruvbox-fg3 mb-6">{error}</p>
+          <h2 className="text-xl font-bold text-gruvbox-fg0 mb-3">Unable to Load Dashboard</h2>
+          <p className="text-gruvbox-fg3 mb-6 leading-relaxed">{error}</p>
           <div className="space-y-3">
             <button 
               onClick={retryLoading}
@@ -320,11 +352,15 @@ const DashboardPage: React.FC = () => {
               Refresh Page
             </button>
           </div>
+          <p className="text-xs text-gruvbox-fg4 mt-4">
+            If this problem persists, please check your internet connection.
+          </p>
         </div>
       </div>
     );
   }
 
+  // Main dashboard content
   return (
     <div className="min-h-screen bg-gruvbox-dark py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
