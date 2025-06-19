@@ -87,6 +87,8 @@ const DashboardPage: React.FC = () => {
     if (!user) return;
 
     try {
+      console.log('Fetching user data for:', user.id);
+      
       // Fetch initial form data
       const { data: formData, error: formError } = await supabase
         .from('initial_forms')
@@ -124,6 +126,7 @@ const DashboardPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
