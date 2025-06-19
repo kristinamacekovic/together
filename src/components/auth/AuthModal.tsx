@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,7 +19,49 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { signIn, signUp, hasCompletedOnboarding } = useAuth();
+  const { signIn, signUp, hasCompletedOnboarding, user } = useAuth();
+
+  // Watch for successful authentication
+  useEffect(() => {
+    if (user && loading) {
+      console.log('User authenticated successfully, handling navigation...');
+      handleSuccessfulAuth();
+    }
+  }, [user, loading]);
+
+  const handleSuccessfulAuth = async () => {
+    try {
+      console.log('Handling successful authentication...');
+      
+      // Close modal and reset form
+      onClose();
+      resetForm();
+      setLoading(false);
+      
+      // Navigate based on onboarding status
+      if (mode === 'signup') {
+        console.log('New user - navigating to onboarding...');
+        navigate('/onboarding');
+      } else {
+        console.log('Existing user - checking onboarding status...');
+        try {
+          const completed = await hasCompletedOnboarding();
+          console.log('Onboarding completed:', completed);
+          if (completed) {
+            navigate('/dashboard');
+          } else {
+            navigate('/onboarding');
+          }
+        } catch (err) {
+          console.error('Error checking onboarding status:', err);
+          navigate('/onboarding');
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleSuccessfulAuth:', error);
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,41 +83,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
       if (result.error) {
         console.error(`${mode} error:`, result.error);
         setError(result.error.message || `Failed to ${mode === 'signin' ? 'sign in' : 'sign up'}`);
-      } else {
-        console.log(`${mode} successful, closing modal...`);
-        onClose();
-        resetForm();
-        
-        // Add a small delay to ensure auth state has updated
-        setTimeout(async () => {
-          // Navigate based on onboarding status
-          if (mode === 'signup') {
-            // New users go to onboarding
-            console.log('Navigating to onboarding...');
-            navigate('/onboarding');
-          } else {
-            // Existing users - check if they've completed onboarding
-            console.log('Checking onboarding status...');
-            try {
-              const completed = await hasCompletedOnboarding();
-              console.log('Onboarding completed:', completed);
-              if (completed) {
-                navigate('/dashboard');
-              } else {
-                navigate('/onboarding');
-              }
-            } catch (err) {
-              console.error('Error checking onboarding status:', err);
-              // Default to onboarding if there's an error
-              navigate('/onboarding');
-            }
-          }
-        }, 100);
+        setLoading(false);
       }
+      // If no error, the useEffect will handle the success case when user state updates
+      
     } catch (err: any) {
       console.error(`Unexpected ${mode} error:`, err);
       setError(err.message || 'An unexpected error occurred');
-    } finally {
       setLoading(false);
     }
   };
