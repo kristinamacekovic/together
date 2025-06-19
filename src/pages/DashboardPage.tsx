@@ -14,7 +14,8 @@ import {
   Zap,
   Heart,
   Settings,
-  CheckCircle
+  CheckCircle,
+  Plus
 } from 'lucide-react';
 
 interface EditableField {
@@ -30,6 +31,7 @@ const DashboardPage: React.FC = () => {
   const [editableField, setEditableField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState<any>('');
   const [saving, setSaving] = useState(false);
+  const [hasOnboardingData, setHasOnboardingData] = useState(false);
 
   // Form options (same as onboarding)
   const studySubjects = [
@@ -65,6 +67,16 @@ const DashboardPage: React.FC = () => {
     { value: 90, label: '1.5 hours' }
   ];
 
+  // Default form data for users without onboarding
+  const defaultFormData: Partial<InitialForm> = {
+    learning_objectives: '',
+    study_subjects: [],
+    preferred_session_length: 25,
+    study_experience: '',
+    challenges: [],
+    motivation_factors: []
+  };
+
   useEffect(() => {
     if (user) {
       fetchUserData();
@@ -82,10 +94,19 @@ const DashboardPage: React.FC = () => {
         .eq('user_id', user.id)
         .single();
 
-      if (formError && formError.code !== 'PGRST116') {
+      if (formError && formError.code === 'PGRST116') {
+        // No onboarding data found - this is fine, we'll show empty form
+        console.log('No onboarding data found, showing empty form');
+        setHasOnboardingData(false);
+        setInitialForm(null);
+      } else if (formError) {
         console.error('Error fetching form data:', formError);
+        setHasOnboardingData(false);
+        setInitialForm(null);
       } else if (formData) {
+        console.log('Found onboarding data:', formData);
         setInitialForm(formData);
+        setHasOnboardingData(true);
       }
 
       // Fetch goals
@@ -108,10 +129,9 @@ const DashboardPage: React.FC = () => {
   };
 
   const startEditing = (field: keyof InitialForm) => {
-    if (!initialForm) return;
-    
+    const currentValue = initialForm?.[field] ?? defaultFormData[field];
     setEditableField({ field, isEditing: true });
-    setEditValue(initialForm[field]);
+    setEditValue(currentValue);
   };
 
   const cancelEditing = () => {
@@ -120,19 +140,46 @@ const DashboardPage: React.FC = () => {
   };
 
   const saveField = async () => {
-    if (!editableField || !initialForm || !user) return;
+    if (!editableField || !user) return;
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('initial_forms')
-        .update({ [editableField.field]: editValue })
-        .eq('user_id', user.id);
+      if (hasOnboardingData && initialForm) {
+        // Update existing record
+        const { error } = await supabase
+          .from('initial_forms')
+          .update({ [editableField.field]: editValue })
+          .eq('user_id', user.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Update local state
-      setInitialForm(prev => prev ? { ...prev, [editableField.field]: editValue } : null);
+        // Update local state
+        setInitialForm(prev => prev ? { ...prev, [editableField.field]: editValue } : null);
+      } else {
+        // Create new record with this field
+        const newFormData = {
+          user_id: user.id,
+          learning_objectives: editableField.field === 'learning_objectives' ? editValue : '',
+          study_subjects: editableField.field === 'study_subjects' ? editValue : [],
+          preferred_session_length: editableField.field === 'preferred_session_length' ? editValue : 25,
+          study_experience: editableField.field === 'study_experience' ? editValue : '',
+          challenges: editableField.field === 'challenges' ? editValue : [],
+          motivation_factors: editableField.field === 'motivation_factors' ? editValue : []
+        };
+
+        const { data, error } = await supabase
+          .from('initial_forms')
+          .insert(newFormData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update local state
+        setInitialForm(data);
+        setHasOnboardingData(true);
+      }
+
       setEditableField(null);
       setEditValue('');
     } catch (error) {
@@ -159,6 +206,18 @@ const DashboardPage: React.FC = () => {
   const formatSessionLength = (minutes: number) => {
     const length = sessionLengths.find(l => l.value === minutes);
     return length ? length.label : `${minutes} minutes`;
+  };
+
+  const getFieldValue = (field: keyof InitialForm) => {
+    return initialForm?.[field] ?? defaultFormData[field];
+  };
+
+  const isFieldEmpty = (field: keyof InitialForm) => {
+    const value = getFieldValue(field);
+    if (Array.isArray(value)) {
+      return value.length === 0;
+    }
+    return !value || value === '';
   };
 
   if (loading) {
@@ -190,6 +249,21 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {/* Onboarding Status */}
+          {!hasOnboardingData && (
+            <div className="bg-gruvbox-yellow/20 border border-gruvbox-yellow/30 rounded-lg p-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <Settings className="w-5 h-5 text-gruvbox-yellow mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-gruvbox-yellow mb-1">Complete Your Profile</h3>
+                  <p className="text-gruvbox-fg2 text-sm">
+                    Help us personalize your study experience by filling out your learning preferences below.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Stats */}
@@ -245,287 +319,191 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Learning Profile */}
-            {initialForm && (
-              <div className="card">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gruvbox-fg0 flex items-center">
-                    <Settings className="w-6 h-6 mr-3 text-gruvbox-orange" />
-                    Your Learning Profile
-                  </h2>
-                  <p className="text-sm text-gruvbox-fg4">Click any field to edit</p>
-                </div>
+            <div className="card">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gruvbox-fg0 flex items-center">
+                  <Settings className="w-6 h-6 mr-3 text-gruvbox-orange" />
+                  Your Learning Profile
+                </h2>
+                <p className="text-sm text-gruvbox-fg4">Click any field to edit</p>
+              </div>
 
-                <div className="space-y-6">
-                  {/* Learning Objectives */}
-                  <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
-                        <Target className="w-5 h-5 mr-2 text-gruvbox-orange" />
-                        Learning Objectives
-                      </h3>
-                      {editableField?.field !== 'learning_objectives' && (
-                        <button
-                          onClick={() => startEditing('learning_objectives')}
-                          className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+              <div className="space-y-6">
+                {/* Learning Objectives */}
+                <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
+                      <Target className="w-5 h-5 mr-2 text-gruvbox-orange" />
+                      Learning Objectives
+                      {isFieldEmpty('learning_objectives') && (
+                        <span className="ml-2 text-xs bg-gruvbox-yellow/20 text-gruvbox-yellow px-2 py-1 rounded-full">
+                          Add
+                        </span>
                       )}
-                    </div>
-                    
-                    {editableField?.field === 'learning_objectives' ? (
-                      <div className="space-y-3">
-                        <textarea
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full h-32 px-4 py-3 bg-gruvbox-dark border border-gruvbox-gray-244/30 rounded-lg text-gruvbox-fg1 placeholder-gruvbox-fg4 focus:outline-none focus:ring-2 focus:ring-gruvbox-orange focus:border-transparent resize-none"
-                          placeholder="Describe your learning objectives..."
-                        />
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={saveField}
-                            disabled={saving}
-                            className="btn btn-primary text-sm"
-                          >
-                            <Save className="w-4 h-4 mr-2" />
-                            {saving ? 'Saving...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="btn btn-secondary text-sm"
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-gruvbox-fg2 leading-relaxed">
-                        {initialForm.learning_objectives}
-                      </p>
+                    </h3>
+                    {editableField?.field !== 'learning_objectives' && (
+                      <button
+                        onClick={() => startEditing('learning_objectives')}
+                        className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
+                      >
+                        {isFieldEmpty('learning_objectives') ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                      </button>
                     )}
                   </div>
-
-                  {/* Study Subjects */}
-                  <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
-                        <BookOpen className="w-5 h-5 mr-2 text-gruvbox-green" />
-                        Study Subjects
-                      </h3>
-                      {editableField?.field !== 'study_subjects' && (
+                  
+                  {editableField?.field === 'learning_objectives' ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-full h-32 px-4 py-3 bg-gruvbox-dark border border-gruvbox-gray-244/30 rounded-lg text-gruvbox-fg1 placeholder-gruvbox-fg4 focus:outline-none focus:ring-2 focus:ring-gruvbox-orange focus:border-transparent resize-none"
+                        placeholder="Describe your learning objectives..."
+                      />
+                      <div className="flex space-x-3">
                         <button
-                          onClick={() => startEditing('study_subjects')}
-                          className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
+                          onClick={saveField}
+                          disabled={saving}
+                          className="btn btn-primary text-sm"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Save className="w-4 h-4 mr-2" />
+                          {saving ? 'Saving...' : 'Save'}
                         </button>
-                      )}
-                    </div>
-                    
-                    {editableField?.field === 'study_subjects' ? (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {studySubjects.map((subject) => (
-                            <button
-                              key={subject}
-                              type="button"
-                              onClick={() => handleArrayToggle(subject)}
-                              className={`p-2 rounded-lg border text-sm font-medium transition-all ${
-                                (editValue as string[]).includes(subject)
-                                  ? 'bg-gruvbox-green/20 border-gruvbox-green text-gruvbox-green'
-                                  : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-green/50'
-                              }`}
-                            >
-                              {subject}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={saveField}
-                            disabled={saving}
-                            className="btn btn-primary text-sm"
-                          >
-                            <Save className="w-4 h-4 mr-2" />
-                            {saving ? 'Saving...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="btn btn-secondary text-sm"
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Cancel
-                          </button>
-                        </div>
+                        <button
+                          onClick={cancelEditing}
+                          className="btn btn-secondary text-sm"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
                       </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {initialForm.study_subjects?.map((subject) => (
+                    </div>
+                  ) : (
+                    <p className="text-gruvbox-fg2 leading-relaxed">
+                      {getFieldValue('learning_objectives') || (
+                        <span className="text-gruvbox-fg4 italic">
+                          Click to add your learning objectives...
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                {/* Study Subjects */}
+                <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
+                      <BookOpen className="w-5 h-5 mr-2 text-gruvbox-green" />
+                      Study Subjects
+                      {isFieldEmpty('study_subjects') && (
+                        <span className="ml-2 text-xs bg-gruvbox-yellow/20 text-gruvbox-yellow px-2 py-1 rounded-full">
+                          Add
+                        </span>
+                      )}
+                    </h3>
+                    {editableField?.field !== 'study_subjects' && (
+                      <button
+                        onClick={() => startEditing('study_subjects')}
+                        className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
+                      >
+                        {isFieldEmpty('study_subjects') ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {editableField?.field === 'study_subjects' ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {studySubjects.map((subject) => (
+                          <button
+                            key={subject}
+                            type="button"
+                            onClick={() => handleArrayToggle(subject)}
+                            className={`p-2 rounded-lg border text-sm font-medium transition-all ${
+                              (editValue as string[]).includes(subject)
+                                ? 'bg-gruvbox-green/20 border-gruvbox-green text-gruvbox-green'
+                                : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-green/50'
+                            }`}
+                          >
+                            {subject}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={saveField}
+                          disabled={saving}
+                          className="btn btn-primary text-sm"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {saving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          className="btn btn-secondary text-sm"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(getFieldValue('study_subjects') as string[])?.length > 0 ? (
+                        (getFieldValue('study_subjects') as string[]).map((subject) => (
                           <span
                             key={subject}
                             className="bg-gruvbox-green/20 border border-gruvbox-green/30 text-gruvbox-green px-3 py-1 rounded-full text-sm font-medium"
                           >
                             {subject}
                           </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Study Experience & Session Length */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
-                          <TrendingUp className="w-5 h-5 mr-2 text-gruvbox-purple" />
-                          Experience Level
-                        </h3>
-                        {editableField?.field !== 'study_experience' && (
-                          <button
-                            onClick={() => startEditing('study_experience')}
-                            className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {editableField?.field === 'study_experience' ? (
-                        <div className="space-y-3">
-                          <div className="space-y-2">
-                            {studyExperiences.map((exp) => (
-                              <button
-                                key={exp.value}
-                                type="button"
-                                onClick={() => setEditValue(exp.value)}
-                                className={`w-full p-3 rounded-lg border text-left transition-all ${
-                                  editValue === exp.value
-                                    ? 'bg-gruvbox-purple/20 border-gruvbox-purple text-gruvbox-purple'
-                                    : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-purple/50'
-                                }`}
-                              >
-                                <div className="font-medium text-sm">{exp.label}</div>
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex space-x-3">
-                            <button
-                              onClick={saveField}
-                              disabled={saving}
-                              className="btn btn-primary text-sm"
-                            >
-                              <Save className="w-4 h-4 mr-2" />
-                              {saving ? 'Saving...' : 'Save'}
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="btn btn-secondary text-sm"
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
+                        ))
                       ) : (
-                        <p className="text-gruvbox-fg2">
-                          {formatExperienceLabel(initialForm.study_experience || '')}
-                        </p>
+                        <span className="text-gruvbox-fg4 italic">
+                          Click to add your study subjects...
+                        </span>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
-                          <Clock className="w-5 h-5 mr-2 text-gruvbox-blue" />
-                          Session Length
-                        </h3>
-                        {editableField?.field !== 'preferred_session_length' && (
-                          <button
-                            onClick={() => startEditing('preferred_session_length')}
-                            className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {editableField?.field === 'preferred_session_length' ? (
-                        <div className="space-y-3">
-                          <div className="space-y-2">
-                            {sessionLengths.map((length) => (
-                              <button
-                                key={length.value}
-                                type="button"
-                                onClick={() => setEditValue(length.value)}
-                                className={`w-full p-3 rounded-lg border text-center transition-all ${
-                                  editValue === length.value
-                                    ? 'bg-gruvbox-blue/20 border-gruvbox-blue text-gruvbox-blue'
-                                    : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-blue/50'
-                                }`}
-                              >
-                                {length.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex space-x-3">
-                            <button
-                              onClick={saveField}
-                              disabled={saving}
-                              className="btn btn-primary text-sm"
-                            >
-                              <Save className="w-4 h-4 mr-2" />
-                              {saving ? 'Saving...' : 'Save'}
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="btn btn-secondary text-sm"
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-gruvbox-fg2">
-                          {formatSessionLength(initialForm.preferred_session_length || 25)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Challenges */}
+                {/* Study Experience & Session Length */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
-                        <Zap className="w-5 h-5 mr-2 text-gruvbox-red-bright" />
-                        Study Challenges
+                        <TrendingUp className="w-5 h-5 mr-2 text-gruvbox-purple" />
+                        Experience Level
+                        {isFieldEmpty('study_experience') && (
+                          <span className="ml-2 text-xs bg-gruvbox-yellow/20 text-gruvbox-yellow px-2 py-1 rounded-full">
+                            Add
+                          </span>
+                        )}
                       </h3>
-                      {editableField?.field !== 'challenges' && (
+                      {editableField?.field !== 'study_experience' && (
                         <button
-                          onClick={() => startEditing('challenges')}
+                          onClick={() => startEditing('study_experience')}
                           className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          {isFieldEmpty('study_experience') ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
                         </button>
                       )}
                     </div>
                     
-                    {editableField?.field === 'challenges' ? (
+                    {editableField?.field === 'study_experience' ? (
                       <div className="space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {commonChallenges.map((challenge) => (
+                        <div className="space-y-2">
+                          {studyExperiences.map((exp) => (
                             <button
-                              key={challenge}
+                              key={exp.value}
                               type="button"
-                              onClick={() => handleArrayToggle(challenge)}
-                              className={`p-2 rounded-lg border text-sm font-medium transition-all ${
-                                (editValue as string[]).includes(challenge)
-                                  ? 'bg-gruvbox-red/20 border-gruvbox-red text-gruvbox-red-bright'
-                                  : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-red/50'
+                              onClick={() => setEditValue(exp.value)}
+                              className={`w-full p-3 rounded-lg border text-left transition-all ${
+                                editValue === exp.value
+                                  ? 'bg-gruvbox-purple/20 border-gruvbox-purple text-gruvbox-purple'
+                                  : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-purple/50'
                               }`}
                             >
-                              {challenge}
+                              <div className="font-medium text-sm">{exp.label}</div>
                             </button>
                           ))}
                         </div>
@@ -548,88 +526,232 @@ const DashboardPage: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {initialForm.challenges?.map((challenge) => (
+                      <p className="text-gruvbox-fg2">
+                        {getFieldValue('study_experience') ? 
+                          formatExperienceLabel(getFieldValue('study_experience') as string) : 
+                          <span className="text-gruvbox-fg4 italic">Click to set your experience level...</span>
+                        }
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
+                        <Clock className="w-5 h-5 mr-2 text-gruvbox-blue" />
+                        Session Length
+                      </h3>
+                      {editableField?.field !== 'preferred_session_length' && (
+                        <button
+                          onClick={() => startEditing('preferred_session_length')}
+                          className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {editableField?.field === 'preferred_session_length' ? (
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          {sessionLengths.map((length) => (
+                            <button
+                              key={length.value}
+                              type="button"
+                              onClick={() => setEditValue(length.value)}
+                              className={`w-full p-3 rounded-lg border text-center transition-all ${
+                                editValue === length.value
+                                  ? 'bg-gruvbox-blue/20 border-gruvbox-blue text-gruvbox-blue'
+                                  : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-blue/50'
+                              }`}
+                            >
+                              {length.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={saveField}
+                            disabled={saving}
+                            className="btn btn-primary text-sm"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            {saving ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="btn btn-secondary text-sm"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gruvbox-fg2">
+                        {formatSessionLength(getFieldValue('preferred_session_length') as number)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Challenges */}
+                <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
+                      <Zap className="w-5 h-5 mr-2 text-gruvbox-red-bright" />
+                      Study Challenges
+                      {isFieldEmpty('challenges') && (
+                        <span className="ml-2 text-xs bg-gruvbox-yellow/20 text-gruvbox-yellow px-2 py-1 rounded-full">
+                          Add
+                        </span>
+                      )}
+                    </h3>
+                    {editableField?.field !== 'challenges' && (
+                      <button
+                        onClick={() => startEditing('challenges')}
+                        className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
+                      >
+                        {isFieldEmpty('challenges') ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {editableField?.field === 'challenges' ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {commonChallenges.map((challenge) => (
+                          <button
+                            key={challenge}
+                            type="button"
+                            onClick={() => handleArrayToggle(challenge)}
+                            className={`p-2 rounded-lg border text-sm font-medium transition-all ${
+                              (editValue as string[]).includes(challenge)
+                                ? 'bg-gruvbox-red/20 border-gruvbox-red text-gruvbox-red-bright'
+                                : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-red/50'
+                            }`}
+                          >
+                            {challenge}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={saveField}
+                          disabled={saving}
+                          className="btn btn-primary text-sm"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {saving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          className="btn btn-secondary text-sm"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(getFieldValue('challenges') as string[])?.length > 0 ? (
+                        (getFieldValue('challenges') as string[]).map((challenge) => (
                           <span
                             key={challenge}
                             className="bg-gruvbox-red/20 border border-gruvbox-red/30 text-gruvbox-red-bright px-3 py-1 rounded-full text-sm font-medium"
                           >
                             {challenge}
                           </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Motivation Factors */}
-                  <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
-                        <Heart className="w-5 h-5 mr-2 text-gruvbox-yellow" />
-                        What Motivates You
-                      </h3>
-                      {editableField?.field !== 'motivation_factors' && (
-                        <button
-                          onClick={() => startEditing('motivation_factors')}
-                          className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                        ))
+                      ) : (
+                        <span className="text-gruvbox-fg4 italic">
+                          Click to add your study challenges...
+                        </span>
                       )}
                     </div>
-                    
-                    {editableField?.field === 'motivation_factors' ? (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {motivationFactors.map((factor) => (
-                            <button
-                              key={factor}
-                              type="button"
-                              onClick={() => handleArrayToggle(factor)}
-                              className={`p-2 rounded-lg border text-sm font-medium transition-all ${
-                                (editValue as string[]).includes(factor)
-                                  ? 'bg-gruvbox-yellow/20 border-gruvbox-yellow text-gruvbox-yellow'
-                                  : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-yellow/50'
-                              }`}
-                            >
-                              {factor}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex space-x-3">
+                  )}
+                </div>
+
+                {/* Motivation Factors */}
+                <div className="border border-gruvbox-gray-244/20 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gruvbox-fg0 flex items-center">
+                      <Heart className="w-5 h-5 mr-2 text-gruvbox-yellow" />
+                      What Motivates You
+                      {isFieldEmpty('motivation_factors') && (
+                        <span className="ml-2 text-xs bg-gruvbox-yellow/20 text-gruvbox-yellow px-2 py-1 rounded-full">
+                          Add
+                        </span>
+                      )}
+                    </h3>
+                    {editableField?.field !== 'motivation_factors' && (
+                      <button
+                        onClick={() => startEditing('motivation_factors')}
+                        className="text-gruvbox-fg4 hover:text-gruvbox-orange transition-colors"
+                      >
+                        {isFieldEmpty('motivation_factors') ? <Plus className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {editableField?.field === 'motivation_factors' ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {motivationFactors.map((factor) => (
                           <button
-                            onClick={saveField}
-                            disabled={saving}
-                            className="btn btn-primary text-sm"
+                            key={factor}
+                            type="button"
+                            onClick={() => handleArrayToggle(factor)}
+                            className={`p-2 rounded-lg border text-sm font-medium transition-all ${
+                              (editValue as string[]).includes(factor)
+                                ? 'bg-gruvbox-yellow/20 border-gruvbox-yellow text-gruvbox-yellow'
+                                : 'bg-gruvbox-dark border-gruvbox-gray-244/30 text-gruvbox-fg3 hover:border-gruvbox-yellow/50'
+                            }`}
                           >
-                            <Save className="w-4 h-4 mr-2" />
-                            {saving ? 'Saving...' : 'Save'}
+                            {factor}
                           </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="btn btn-secondary text-sm"
-                          >
-                            <X className="w-4 h-4 mr-2" />
-                            Cancel
-                          </button>
-                        </div>
+                        ))}
                       </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {initialForm.motivation_factors?.map((factor) => (
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={saveField}
+                          disabled={saving}
+                          className="btn btn-primary text-sm"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          {saving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          className="btn btn-secondary text-sm"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(getFieldValue('motivation_factors') as string[])?.length > 0 ? (
+                        (getFieldValue('motivation_factors') as string[]).map((factor) => (
                           <span
                             key={factor}
                             className="bg-gruvbox-yellow/20 border border-gruvbox-yellow/30 text-gruvbox-yellow px-3 py-1 rounded-full text-sm font-medium"
                           >
                             {factor}
                           </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                        ))
+                      ) : (
+                        <span className="text-gruvbox-fg4 italic">
+                          Click to add what motivates you...
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -675,7 +797,7 @@ const DashboardPage: React.FC = () => {
                   <Target className="w-12 h-12 text-gruvbox-gray-244 mx-auto mb-4" />
                   <p className="text-gruvbox-fg3">No goals yet</p>
                   <p className="text-sm text-gruvbox-fg4 mt-2">
-                    Complete onboarding to create your first goal
+                    Complete your profile to create your first goal
                   </p>
                 </div>
               )}
