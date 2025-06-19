@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -9,6 +10,7 @@ interface AuthModalProps {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 'signin' }) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +19,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, hasCompletedOnboarding } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +39,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
       } else {
         onClose();
         resetForm();
+        
+        // Navigate based on onboarding status
+        if (mode === 'signup') {
+          // New users go to onboarding
+          navigate('/onboarding');
+        } else {
+          // Existing users - check if they've completed onboarding
+          const completed = await hasCompletedOnboarding();
+          if (completed) {
+            navigate('/dashboard');
+          } else {
+            navigate('/onboarding');
+          }
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
