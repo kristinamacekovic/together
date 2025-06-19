@@ -48,6 +48,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
+      
+      // Handle sign out event specifically
+      if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing all state');
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -133,25 +144,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Starting sign out process...');
       
-      // Clear local state first for immediate UI feedback
+      // Call Supabase sign out with scope 'global' to clear all sessions
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) {
+        console.error('Supabase sign out error:', error);
+        // Even if there's an error, manually clear the state
+      }
+      
+      // Force clear local state immediately
       setUser(null);
       setProfile(null);
       setSession(null);
       
-      // Then call Supabase sign out
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Supabase sign out error:', error);
-        // Don't throw here - we've already cleared local state
-      } else {
-        console.log('Supabase sign out successful');
+      // Clear any remaining localStorage items
+      try {
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
+        
+        // Clear all supabase-related localStorage items
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('supabase') || key.includes('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (storageError) {
+        console.warn('Error clearing localStorage:', storageError);
       }
       
       console.log('Sign out process completed');
     } catch (error) {
       console.error('Error during sign out:', error);
       // Even if there's an error, we've cleared local state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
     }
   };
 
