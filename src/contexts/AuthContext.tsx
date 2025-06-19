@@ -84,7 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('Starting sign up process...');
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -93,20 +94,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           },
         },
       });
+      
+      console.log('Sign up result:', { data, error });
       return { error };
     } catch (error) {
+      console.error('Sign up error:', error);
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Starting sign in process...');
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      return { error };
+      
+      console.log('Sign in result:', { data, error });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        return { error };
+      }
+      
+      // The auth state change listener will handle setting user/session/profile
+      console.log('Sign in successful, waiting for auth state change...');
+      return { error: null };
+      
     } catch (error) {
+      console.error('Sign in catch error:', error);
       return { error };
     }
   };

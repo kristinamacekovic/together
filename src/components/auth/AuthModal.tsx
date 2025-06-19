@@ -27,6 +27,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
     setError('');
 
     try {
+      console.log(`Starting ${mode} process...`);
+      
       let result;
       if (mode === 'signup') {
         result = await signUp(email, password, fullName);
@@ -34,28 +36,45 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
         result = await signIn(email, password);
       }
 
+      console.log(`${mode} result:`, result);
+
       if (result.error) {
-        setError(result.error.message);
+        console.error(`${mode} error:`, result.error);
+        setError(result.error.message || `Failed to ${mode === 'signin' ? 'sign in' : 'sign up'}`);
       } else {
+        console.log(`${mode} successful, closing modal...`);
         onClose();
         resetForm();
         
-        // Navigate based on onboarding status
-        if (mode === 'signup') {
-          // New users go to onboarding
-          navigate('/onboarding');
-        } else {
-          // Existing users - check if they've completed onboarding
-          const completed = await hasCompletedOnboarding();
-          if (completed) {
-            navigate('/dashboard');
-          } else {
+        // Add a small delay to ensure auth state has updated
+        setTimeout(async () => {
+          // Navigate based on onboarding status
+          if (mode === 'signup') {
+            // New users go to onboarding
+            console.log('Navigating to onboarding...');
             navigate('/onboarding');
+          } else {
+            // Existing users - check if they've completed onboarding
+            console.log('Checking onboarding status...');
+            try {
+              const completed = await hasCompletedOnboarding();
+              console.log('Onboarding completed:', completed);
+              if (completed) {
+                navigate('/dashboard');
+              } else {
+                navigate('/onboarding');
+              }
+            } catch (err) {
+              console.error('Error checking onboarding status:', err);
+              // Default to onboarding if there's an error
+              navigate('/onboarding');
+            }
           }
-        }
+        }, 100);
       }
-    } catch (err) {
-      setError('An unexpected error occurred');
+    } catch (err: any) {
+      console.error(`Unexpected ${mode} error:`, err);
+      setError(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
