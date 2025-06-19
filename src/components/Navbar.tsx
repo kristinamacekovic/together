@@ -10,16 +10,8 @@ const Navbar: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
   
   const { user, profile, signOut } = useAuth();
-
-  // Reset signing out state when user changes
-  useEffect(() => {
-    if (!user) {
-      setIsSigningOut(false);
-    }
-  }, [user]);
 
   const handleAuthClick = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -27,19 +19,17 @@ const Navbar: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    if (isSigningOut) return; // Prevent multiple clicks
-    
-    setIsSigningOut(true);
     try {
       console.log('Starting sign out process...');
-      await signOut();
-      console.log('Sign out completed, closing menus...');
       
       // Close menus immediately
       setIsUserMenuOpen(false);
       setIsMenuOpen(false);
       
-      console.log('Navigating to home...');
+      // Sign out
+      await signOut();
+      
+      console.log('Sign out completed, navigating to home...');
       // Navigate to home page
       navigate('/');
       
@@ -50,11 +40,6 @@ const Navbar: React.FC = () => {
       setIsUserMenuOpen(false);
       setIsMenuOpen(false);
       navigate('/');
-    } finally {
-      // Reset the signing out state after a short delay
-      setTimeout(() => {
-        setIsSigningOut(false);
-      }, 100);
     }
   };
 
@@ -128,11 +113,10 @@ const Navbar: React.FC = () => {
                       </button>
                       <button
                         onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
+                        <span>Sign Out</span>
                       </button>
                     </div>
                   )}
@@ -200,10 +184,9 @@ const Navbar: React.FC = () => {
                       </button>
                       <button
                         onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className="btn btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn btn-secondary w-full"
                       >
-                        {isSigningOut ? 'Signing out...' : 'Sign Out'}
+                        Sign Out
                       </button>
                     </div>
                   </div>

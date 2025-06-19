@@ -31,22 +31,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (error) {
+          console.error('Error getting initial session:', error);
+          setLoading(false);
+          return;
+        }
+
+        console.log('Initial session:', session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    getInitialSession();
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       console.log('Auth state changed:', event, session?.user?.email);
       
       // Handle sign out event specifically
@@ -59,6 +83,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
+      // Handle token refresh
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed');
+        setSession(session);
+        return;
+      }
+      
+      // Handle sign in
+      if (event === 'SIGNED_IN') {
+        console.log('User signed in');
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+        return;
+      }
+      
+      // Default handling for other events
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -70,11 +116,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -83,7 +133,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Error fetching profile:', error);
+        // Don't throw error, just log it and continue
       } else {
+        console.log('Profile fetched successfully:', data);
         setProfile(data);
       }
     } catch (error) {
@@ -144,41 +196,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Starting sign out process...');
       
-      // Call Supabase sign out with scope 'global' to clear all sessions
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      
-      if (error) {
-        console.error('Supabase sign out error:', error);
-        // Even if there's an error, manually clear the state
-      }
-      
-      // Force clear local state immediately
+      // Immediately clear local state to provide instant feedback
       setUser(null);
       setProfile(null);
       setSession(null);
       
-      // Clear any remaining localStorage items
-      try {
-        localStorage.removeItem('supabase.auth.token');
-        localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
-        
-        // Clear all supabase-related localStorage items
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('supabase') || key.includes('sb-')) {
-            localStorage.removeItem(key);
-          }
-        });
-      } catch (storageError) {
-        console.warn('Error clearing localStorage:', storageError);
+      // Call Supabase sign out
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Supabase sign out error:', error);
+        // Even if there's an error, we've already cleared local state
       }
       
       console.log('Sign out process completed');
     } catch (error) {
       console.error('Error during sign out:', error);
       // Even if there's an error, we've cleared local state
-      setUser(null);
-      setProfile(null);
-      setSession(null);
     }
   };
 
