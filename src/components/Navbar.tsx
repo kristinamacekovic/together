@@ -20,23 +20,22 @@ const Navbar: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      console.log('Starting sign out process...');
+      console.log('🚪 Starting sign out from navbar...');
       
-      // Close menus immediately
+      // Close menus immediately for instant feedback
       setIsUserMenuOpen(false);
       setIsMenuOpen(false);
       
-      // Sign out
+      // Sign out (this will clear auth state immediately)
       await signOut();
       
-      console.log('Sign out completed, navigating to home...');
-      // Navigate to home page
+      // Navigate to home
       navigate('/');
       
-      console.log('Sign out process complete');
+      console.log('✅ Sign out completed successfully');
     } catch (error) {
-      console.error('Error signing out:', error);
-      // Even if there's an error, try to navigate away
+      console.error('❌ Error during sign out:', error);
+      // Even if there's an error, close menus and navigate
       setIsUserMenuOpen(false);
       setIsMenuOpen(false);
       navigate('/');
