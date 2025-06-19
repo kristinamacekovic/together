@@ -30,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+  const signOutInProgressRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -78,12 +79,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
       
       try {
+        // Handle sign out event specifically
+        if (event === 'SIGNED_OUT') {
+          console.log('👋 User signed out - clearing all state');
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          signOutInProgressRef.current = false;
+          return;
+        }
+
+        // Handle other events
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           await fetchProfile(session.user.id);
-        } else {
+        } else if (event !== 'SIGNED_OUT') {
+          // Only clear profile if it's not a sign out event (already handled above)
           setProfile(null);
           setLoading(false);
         }
@@ -171,10 +185,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Prevent multiple simultaneous sign out attempts
+    if (signOutInProgressRef.current) {
+      console.log('⏳ Sign out already in progress, skipping...');
+      return;
+    }
+
     try {
-      console.log('👋 Starting sign out...');
+      console.log('👋 Starting sign out process...');
+      signOutInProgressRef.current = true;
       
-      // Call Supabase sign out first
+      // Call Supabase sign out
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -182,20 +203,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Clear state after successful sign out
-      setUser(null);
-      setProfile(null);
-      setSession(null);
+      console.log('✅ Supabase sign out successful');
       
-      console.log('✅ Sign out successful');
+      // Clear state immediately (the auth state change listener will also handle this)
+      if (mountedRef.current) {
+        setUser(null);
+        setProfile(null);
+        setSession(null);
+      }
+      
+      console.log('✅ Sign out completed successfully');
       
     } catch (error) {
       console.error('❌ Error during sign out:', error);
-      // Even if there's an error, clear the state
-      setUser(null);
-      setProfile(null);
-      setSession(null);
+      
+      // Even if there's an error, clear the state to ensure UI consistency
+      if (mountedRef.current) {
+        setUser(null);
+        setProfile(null);
+        setSession(null);
+      }
+      
+      // Re-throw the error so the UI can handle it
       throw error;
+    } finally {
+      signOutInProgressRef.current = false;
     }
   };
 
