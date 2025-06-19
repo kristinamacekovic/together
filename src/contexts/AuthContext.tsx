@@ -30,15 +30,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
-  const initializingRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
     
     const initializeAuth = async () => {
-      if (initializingRef.current) return;
-      initializingRef.current = true;
-
       try {
         console.log('🔄 Initializing auth...');
         
@@ -49,22 +45,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (error) {
           console.error('❌ Error getting initial session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('✅ Initial session loaded:', session?.user?.email || 'No user');
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
         } else {
-          console.log('✅ Initial session loaded:', session?.user?.email || 'No user');
-          
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
+          setLoading(false);
         }
       } catch (error) {
         console.error('❌ Error in initializeAuth:', error);
-      } finally {
         if (mountedRef.current) {
           setLoading(false);
-          initializingRef.current = false;
         }
       }
     };
@@ -80,42 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
       
       try {
-        switch (event) {
-          case 'SIGNED_OUT':
-            console.log('👋 User signed out - clearing all state');
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-            setLoading(false);
-            break;
-            
-          case 'SIGNED_IN':
-            console.log('👤 User signed in');
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-              await fetchProfile(session.user.id);
-            } else {
-              setLoading(false);
-            }
-            break;
-            
-          case 'TOKEN_REFRESHED':
-            console.log('🔄 Token refreshed');
-            setSession(session);
-            break;
-            
-          default:
-            console.log('🔄 Other auth event:', event);
-            setSession(session);
-            setUser(session?.user ?? null);
-            
-            if (session?.user) {
-              await fetchProfile(session.user.id);
-            } else {
-              setProfile(null);
-              setLoading(false);
-            }
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+          setLoading(false);
         }
       } catch (error) {
         console.error('❌ Error handling auth state change:', error);
@@ -204,22 +174,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('👋 Starting sign out...');
       
-      // Immediately clear state for instant UI feedback
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-      
-      // Call Supabase sign out (this will trigger the auth state change)
+      // Call Supabase sign out first
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('❌ Supabase sign out error:', error);
-      } else {
-        console.log('✅ Sign out successful');
+        throw error;
       }
+      
+      // Clear state after successful sign out
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      
+      console.log('✅ Sign out successful');
       
     } catch (error) {
       console.error('❌ Error during sign out:', error);
+      // Even if there's an error, clear the state
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      throw error;
     }
   };
 

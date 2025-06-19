@@ -98,8 +98,8 @@ const DashboardPage: React.FC = () => {
   }, [user]);
 
   const fetchUserData = async () => {
-    if (!user) {
-      console.log('❌ No user available for data fetch');
+    if (!user || !mountedRef.current) {
+      console.log('❌ No user available for data fetch or component unmounted');
       setLoading(false);
       return;
     }
@@ -109,90 +109,53 @@ const DashboardPage: React.FC = () => {
       setError('');
       setLoading(true);
       
-      // Set a reasonable timeout
-      const TIMEOUT_MS = 10000; // 10 seconds
-      
-      // Create abort controller for cleanup
-      const abortController = new AbortController();
-      
-      // Set timeout
-      const timeoutId = setTimeout(() => {
-        abortController.abort();
-      }, TIMEOUT_MS);
+      // Fetch initial form data
+      console.log('📝 Fetching initial form data...');
+      const { data: formData, error: formError } = await supabase
+        .from('initial_forms')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-      try {
-        // Fetch initial form data with timeout
-        console.log('📝 Fetching initial form data...');
-        const formPromise = supabase
-          .from('initial_forms')
-          .select('*')
-          .eq('user_id', user.id)
-          .abortSignal(abortController.signal)
-          .single();
+      // Fetch goals
+      console.log('🎯 Fetching goals data...');
+      const { data: goalsData, error: goalsError } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-        // Fetch goals with timeout  
-        console.log('🎯 Fetching goals data...');
-        const goalsPromise = supabase
-          .from('goals')
-          .select('*')
-          .eq('user_id', user.id)
-          .abortSignal(abortController.signal)
-          .order('created_at', { ascending: false });
-
-        // Execute both queries
-        const [formResult, goalsResult] = await Promise.all([
-          formPromise,
-          goalsPromise
-        ]);
-
-        // Clear timeout since we got results
-        clearTimeout(timeoutId);
-
-        if (!mountedRef.current) {
-          console.log('🚫 Component unmounted, skipping state updates');
-          return;
-        }
-
-        // Handle form data
-        console.log('📝 Processing form result...');
-        if (formResult.error) {
-          if (formResult.error.code === 'PGRST116') {
-            console.log('ℹ️ No onboarding data found - user can fill it in');
-            setHasOnboardingData(false);
-            setInitialForm(null);
-          } else {
-            console.error('❌ Form data error:', formResult.error);
-            throw new Error(`Failed to load profile data: ${formResult.error.message}`);
-          }
-        } else {
-          console.log('✅ Form data loaded successfully');
-          setInitialForm(formResult.data);
-          setHasOnboardingData(true);
-        }
-
-        // Handle goals data
-        console.log('🎯 Processing goals result...');
-        if (goalsResult.error) {
-          console.error('❌ Goals data error:', goalsResult.error);
-          throw new Error(`Failed to load goals: ${goalsResult.error.message}`);
-        } else {
-          console.log('✅ Goals loaded successfully:', goalsResult.data?.length || 0, 'goals');
-          setGoals(goalsResult.data || []);
-        }
-
-        console.log('🎉 Dashboard data fetch completed successfully');
-
-      } catch (fetchError: any) {
-        clearTimeout(timeoutId);
-        
-        if (fetchError.name === 'AbortError') {
-          console.error('⏰ Dashboard data fetch timed out');
-          throw new Error('Loading took too long. Please check your connection and try again.');
-        } else {
-          console.error('❌ Dashboard data fetch error:', fetchError);
-          throw fetchError;
-        }
+      if (!mountedRef.current) {
+        console.log('🚫 Component unmounted, skipping state updates');
+        return;
       }
+
+      // Handle form data
+      if (formError) {
+        if (formError.code === 'PGRST116') {
+          console.log('ℹ️ No onboarding data found - user can fill it in');
+          setHasOnboardingData(false);
+          setInitialForm(null);
+        } else {
+          console.error('❌ Form data error:', formError);
+          throw new Error(`Failed to load profile data: ${formError.message}`);
+        }
+      } else {
+        console.log('✅ Form data loaded successfully');
+        setInitialForm(formData);
+        setHasOnboardingData(true);
+      }
+
+      // Handle goals data
+      if (goalsError) {
+        console.error('❌ Goals data error:', goalsError);
+        throw new Error(`Failed to load goals: ${goalsError.message}`);
+      } else {
+        console.log('✅ Goals loaded successfully:', goalsData?.length || 0, 'goals');
+        setGoals(goalsData || []);
+      }
+
+      console.log('🎉 Dashboard data fetch completed successfully');
 
     } catch (error: any) {
       console.error('💥 Error in fetchUserData:', error);
