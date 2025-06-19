@@ -19,14 +19,20 @@ const Navbar: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    setIsUserMenuOpen(false);
-    navigate('/');
+    try {
+      await signOut();
+      setIsUserMenuOpen(false);
+      setIsMenuOpen(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const handleDashboardClick = () => {
     navigate('/dashboard');
     setIsUserMenuOpen(false);
+    setIsMenuOpen(false);
   };
 
   return (
