@@ -11,7 +11,7 @@ const Navbar: React.FC = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   
-  const { user, profile, signOut, hasCompletedOnboarding } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const handleAuthClick = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -24,15 +24,8 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
-  const handleDashboardClick = async () => {
-    if (user) {
-      const completed = await hasCompletedOnboarding();
-      if (completed) {
-        navigate('/dashboard');
-      } else {
-        navigate('/onboarding');
-      }
-    }
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
     setIsUserMenuOpen(false);
   };
 
