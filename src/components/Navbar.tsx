@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,13 @@ const Navbar: React.FC = () => {
   
   const { user, profile, signOut } = useAuth();
 
+  // Reset signing out state when user changes
+  useEffect(() => {
+    if (!user) {
+      setIsSigningOut(false);
+    }
+  }, [user]);
+
   const handleAuthClick = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
     setIsAuthModalOpen(true);
@@ -28,7 +35,7 @@ const Navbar: React.FC = () => {
       await signOut();
       console.log('Sign out completed, closing menus...');
       
-      // Close menus
+      // Close menus immediately
       setIsUserMenuOpen(false);
       setIsMenuOpen(false);
       
@@ -44,7 +51,10 @@ const Navbar: React.FC = () => {
       setIsMenuOpen(false);
       navigate('/');
     } finally {
-      setIsSigningOut(false);
+      // Reset the signing out state after a short delay
+      setTimeout(() => {
+        setIsSigningOut(false);
+      }, 100);
     }
   };
 
@@ -53,6 +63,19 @@ const Navbar: React.FC = () => {
     setIsUserMenuOpen(false);
     setIsMenuOpen(false);
   };
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isUserMenuOpen && !target.closest('.user-menu-container')) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isUserMenuOpen]);
 
   return (
     <>
@@ -80,7 +103,7 @@ const Navbar: React.FC = () => {
               </a>
               
               {user ? (
-                <div className="relative">
+                <div className="relative user-menu-container">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="flex items-center space-x-2 text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors"
