@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, InitialForm, Goal } from '../lib/supabase';
 import { 
@@ -19,14 +19,59 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface EditableField {
   field: keyof InitialForm;
   isEditing: boolean;
 }
 
+// Move constants outside the component
+const studySubjects = [
+  'Mathematics', 'Science', 'Programming', 'Languages', 'Business', 
+  'Arts', 'History', 'Literature', 'Medicine', 'Engineering', 
+  'Psychology', 'Philosophy', 'Music', 'Other'
+];
+
+const studyExperiences = [
+  { value: 'beginner', label: 'Beginner - Just starting out' },
+  { value: 'intermediate', label: 'Intermediate - Some experience' },
+  { value: 'advanced', label: 'Advanced - Quite experienced' },
+  { value: 'expert', label: 'Expert - Very experienced' }
+];
+
+const commonChallenges = [
+  'Staying focused', 'Procrastination', 'Time management', 
+  'Understanding material', 'Motivation', 'Distractions',
+  'Consistency', 'Setting goals', 'Taking breaks'
+];
+
+const motivationFactors = [
+  'Career goals', 'Personal growth', 'Academic requirements', 
+  'Curiosity', 'Competition', 'Achievement', 'Helping others',
+  'Financial success', 'Recognition'
+];
+
+const sessionLengths = [
+  { value: 15, label: '15 minutes' },
+  { value: 25, label: '25 minutes (Pomodoro)' },
+  { value: 45, label: '45 minutes' },
+  { value: 60, label: '1 hour' },
+  { value: 90, label: '1.5 hours' }
+];
+
+const defaultFormData: Partial<InitialForm> = {
+  learning_objectives: '',
+  study_subjects: [],
+  preferred_session_length: 25,
+  study_experience: '',
+  challenges: [],
+  motivation_factors: []
+};
+
 const DashboardPage: React.FC = () => {
   const { user, profile } = useAuth();
+  const userId = user?.id;
   const [initialForm, setInitialForm] = useState<InitialForm | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,76 +81,19 @@ const DashboardPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const mountedRef = useRef(true);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [sessionUrl, setSessionUrl] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // Form options (same as onboarding)
-  const studySubjects = [
-    'Mathematics', 'Science', 'Programming', 'Languages', 'Business', 
-    'Arts', 'History', 'Literature', 'Medicine', 'Engineering', 
-    'Psychology', 'Philosophy', 'Music', 'Other'
-  ];
-
-  const studyExperiences = [
-    { value: 'beginner', label: 'Beginner - Just starting out' },
-    { value: 'intermediate', label: 'Intermediate - Some experience' },
-    { value: 'advanced', label: 'Advanced - Quite experienced' },
-    { value: 'expert', label: 'Expert - Very experienced' }
-  ];
-
-  const commonChallenges = [
-    'Staying focused', 'Procrastination', 'Time management', 
-    'Understanding material', 'Motivation', 'Distractions',
-    'Consistency', 'Setting goals', 'Taking breaks'
-  ];
-
-  const motivationFactors = [
-    'Career goals', 'Personal growth', 'Academic requirements', 
-    'Curiosity', 'Competition', 'Achievement', 'Helping others',
-    'Financial success', 'Recognition'
-  ];
-
-  const sessionLengths = [
-    { value: 15, label: '15 minutes' },
-    { value: 25, label: '25 minutes (Pomodoro)' },
-    { value: 45, label: '45 minutes' },
-    { value: 60, label: '1 hour' },
-    { value: 90, label: '1.5 hours' }
-  ];
-
-  // Default form data for users without onboarding
-  const defaultFormData: Partial<InitialForm> = {
-    learning_objectives: '',
-    study_subjects: [],
-    preferred_session_length: 25,
-    study_experience: '',
-    challenges: [],
-    motivation_factors: []
-  };
-
-  useEffect(() => {
-    mountedRef.current = true;
-    
-    if (user) {
-      console.log('🚀 Dashboard: User found, starting data fetch...');
-      fetchUserData();
-    } else {
-      console.log('❌ Dashboard: No user found');
-      setLoading(false);
-    }
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [user]);
-
-  const fetchUserData = async () => {
-    if (!user || !mountedRef.current) {
+  const fetchUserData = useCallback(async () => {
+    if (!userId || !mountedRef.current) {
       console.log('❌ No user available for data fetch or component unmounted');
       setLoading(false);
       return;
     }
     
     try {
-      console.log('📊 Starting dashboard data fetch for user:', user.id);
+      console.log('📊 Starting dashboard data fetch for user:', userId);
       setError('');
       setLoading(true);
       
@@ -114,7 +102,7 @@ const DashboardPage: React.FC = () => {
       const { data: formData, error: formError } = await supabase
         .from('initial_forms')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single();
 
       // Fetch goals
@@ -122,7 +110,7 @@ const DashboardPage: React.FC = () => {
       const { data: goalsData, error: goalsError } = await supabase
         .from('goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (!mountedRef.current) {
@@ -172,6 +160,53 @@ const DashboardPage: React.FC = () => {
         setLoading(false);
       }
     }
+  }, [userId]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    
+    if (userId) {
+      console.log('🚀 Dashboard: User found, starting data fetch...');
+      fetchUserData();
+    } else {
+      console.log('❌ Dashboard: No user found');
+      setLoading(false);
+    }
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [userId, fetchUserData]);
+
+  const createConversation = async () => {
+    if (!initialForm) {
+      setError('Please fill out your onboarding details first.');
+      return;
+    }
+
+    setIsCreatingSession(true);
+    setError('');
+    setSessionUrl(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-conversation', {
+        body: initialForm,
+      })
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.conversation_url) {
+        setSessionUrl(data.conversation_url);
+      } else {
+        throw new Error('Failed to get conversation URL.');
+      }
+    } catch (error: any) {
+      setError(`Failed to create session: ${error.message}`);
+    } finally {
+      setIsCreatingSession(false);
+    }
   };
 
   const retryLoading = () => {
@@ -191,51 +226,53 @@ const DashboardPage: React.FC = () => {
     setEditValue('');
   };
 
-  const saveField = async () => {
-    if (!editableField || !user) return;
+  const saveField = useCallback(async () => {
+    if (!editableField || !userId) return;
 
     setSaving(true);
+    setError('');
+
     try {
-      console.log('💾 Saving field:', editableField.field, 'with value:', editValue);
-      
-      if (hasOnboardingData && initialForm) {
+      // Always check if a record exists for this user
+      const { data: existing, error: fetchError } = await supabase
+        .from('initial_forms')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      let saveError = null;
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      if (existing) {
         // Update existing record
         const { error } = await supabase
           .from('initial_forms')
           .update({ [editableField.field]: editValue })
-          .eq('user_id', user.id);
-
-        if (error) throw error;
-
-        // Update local state
-        setInitialForm(prev => prev ? { ...prev, [editableField.field]: editValue } : null);
-        console.log('✅ Field updated successfully');
+          .eq('user_id', userId);
+        saveError = error;
       } else {
-        // Create new record with this field
-        const newFormData = {
-          user_id: user.id,
-          learning_objectives: editableField.field === 'learning_objectives' ? editValue : '',
-          study_subjects: editableField.field === 'study_subjects' ? editValue : [],
-          preferred_session_length: editableField.field === 'preferred_session_length' ? editValue : 25,
-          study_experience: editableField.field === 'study_experience' ? editValue : '',
-          challenges: editableField.field === 'challenges' ? editValue : [],
-          motivation_factors: editableField.field === 'motivation_factors' ? editValue : []
+        // Insert new record
+        const newRecord: Partial<InitialForm> = {
+          ...defaultFormData,
+          user_id: userId,
+          [editableField.field]: editValue,
         };
-
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('initial_forms')
-          .insert(newFormData)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Update local state
-        setInitialForm(data);
-        setHasOnboardingData(true);
-        console.log('✅ New form record created successfully');
+          .insert(newRecord as InitialForm);
+        saveError = error;
       }
+      if (saveError) throw saveError;
 
+      // Always fetch the latest record after save
+      const { data: latest, error: latestError } = await supabase
+        .from('initial_forms')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      if (latestError) throw latestError;
+      setInitialForm(latest);
+      setHasOnboardingData(true);
       setEditableField(null);
       setEditValue('');
     } catch (error: any) {
@@ -244,7 +281,7 @@ const DashboardPage: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [userId, editableField, editValue]);
 
   const handleArrayToggle = (value: string) => {
     const currentArray = editValue as string[];
@@ -405,9 +442,57 @@ const DashboardPage: React.FC = () => {
                 <p className="text-gruvbox-fg3 mb-6">
                   Your AI study buddy is ready to help you stay focused and productive.
                 </p>
-                <button className="btn btn-primary">
-                  Start New Session
-                </button>
+                <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                        <Zap className="w-6 h-6 mr-2 text-purple-500" />
+                        Start a New Session
+                      </h3>
+                      <p className="text-gray-600 mt-2">
+                        Ready to focus? Launch a new AI-powered study session tailored to your goals.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      onClick={createConversation}
+                      disabled={isCreatingSession || !initialForm}
+                      className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {isCreatingSession ? (
+                        <>
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                          Creating Session...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-2" />
+                          Launch Session
+                        </>
+                      )}
+                    </button>
+                    {sessionUrl && (
+                      <div className="mt-4 p-4 bg-green-100 border-l-4 border-green-500 rounded-r-lg">
+                        <p className="font-semibold text-green-800">Session created!</p>
+                        <a
+                          href={sessionUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:underline break-all"
+                        >
+                          {sessionUrl}
+                        </a>
+                        <button
+                          className="mt-3 w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-300"
+                          onClick={() => navigate(`/conversation/${encodeURIComponent(sessionUrl)}`)}
+                        >
+                          Join Session in App
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

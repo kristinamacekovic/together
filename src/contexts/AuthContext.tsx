@@ -78,35 +78,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
       
-      try {
-        // Handle sign out event specifically
-        if (event === 'SIGNED_OUT') {
-          console.log('👋 User signed out - clearing all state');
-          setSession(null);
+      setSession(session); // Set session immediately
+
+      if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out - clearing user/profile state');
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      if (session?.user) {
+        const profileExists = await fetchProfile(session.user.id);
+        if (profileExists && mountedRef.current) {
+          // Profile exists, user is valid
+          setUser(session.user);
+        } else if (mountedRef.current) {
+          // No profile found for a valid session, treat as logged out
+          console.warn('⚠️ No profile found for user, clearing session.');
           setUser(null);
           setProfile(null);
-          setLoading(false);
-          signOutInProgressRef.current = false;
-          return;
+          // Optionally, sign them out completely to clear the invalid JWT
+          await supabase.auth.signOut();
         }
-
-        // Handle other events
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else if (event !== 'SIGNED_OUT') {
-          // Only clear profile if it's not a sign out event (already handled above)
-          setProfile(null);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('❌ Error handling auth state change:', error);
-        if (mountedRef.current) {
-          setLoading(false);
-        }
+      } else {
+        // No session user
+        setUser(null);
+        setProfile(null);
       }
+      setLoading(false); // Set loading to false after all checks
     });
 
     return () => {
@@ -116,28 +116,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    if (!mountedRef.current) return;
-    
+  const fetchProfile = async (userId: string): Promise<boolean> => {
+    if (!mountedRef.current) return false;
     try {
-      console.log('📋 Fetching profile for user:', userId);
-      
+      console.log('📋 [fetchProfile] Start for user:', userId);
+      setLoading(true); // Set loading true at the start of the fetch
+      console.log('📋 [fetchProfile] Before supabase.from().select()');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+      console.log('📋 [fetchProfile] After supabase.from().select()', { data, error });
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) return false;
 
       if (error) {
         console.error('❌ Error fetching profile:', error);
+        setProfile(null);
+        return false; // Profile does not exist or error occurred
       } else {
         console.log('✅ Profile fetched successfully');
         setProfile(data);
+        return true; // Profile exists
       }
     } catch (error) {
       console.error('❌ Error in fetchProfile:', error);
+      if (mountedRef.current) {
+        setProfile(null);
+      }
+      return false;
     } finally {
       if (mountedRef.current) {
         setLoading(false);
@@ -194,36 +202,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('👋 Starting sign out process...');
       signOutInProgressRef.current = true;
-      
-      // Call Supabase sign out
       const { error } = await supabase.auth.signOut();
-      
+      console.log('🔄 supabase.auth.signOut() finished', error);
       if (error) {
         console.error('❌ Supabase sign out error:', error);
         throw error;
       }
-      
+
       console.log('✅ Supabase sign out successful');
-      
+
       // Clear state immediately (the auth state change listener will also handle this)
       if (mountedRef.current) {
         setUser(null);
         setProfile(null);
         setSession(null);
       }
-      
+
       console.log('✅ Sign out completed successfully');
-      
+
     } catch (error) {
       console.error('❌ Error during sign out:', error);
-      
+
       // Even if there's an error, clear the state to ensure UI consistency
       if (mountedRef.current) {
         setUser(null);
         setProfile(null);
         setSession(null);
       }
-      
+
       // Re-throw the error so the UI can handle it
       throw error;
     } finally {

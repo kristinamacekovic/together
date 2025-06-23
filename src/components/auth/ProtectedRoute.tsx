@@ -31,6 +31,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, fallback }) =
     );
   }
 
+  if (user && !user.email_confirmed_at) {
+    return (
+      <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gruvbox-fg0 mb-4">Please Confirm Your Email</h2>
+          <p className="text-gruvbox-fg2">We've sent a confirmation link to your email address.</p>
+          <p className="text-gruvbox-fg2">Please click the link to continue.</p>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 };
 

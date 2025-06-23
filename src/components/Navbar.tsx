@@ -32,37 +32,15 @@ const Navbar: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    if (isSigningOut) {
-      console.log('⏳ Sign out already in progress, ignoring click');
-      return;
-    }
-    
+    setIsSigningOut(true);
+    // The useEffect hook watching `user` will reset the signing out state
+    // once the user is null, so we don't need to do it here.
     try {
-      console.log('🚪 Starting sign out from navbar...');
-      setIsSigningOut(true);
-      
-      // Close menus immediately for instant feedback
-      setIsUserMenuOpen(false);
-      setIsMenuOpen(false);
-      
-      // Perform sign out
       await signOut();
-      
-      // Navigate to home page
       navigate('/');
-      
-      console.log('✅ Navbar sign out completed successfully');
-      
     } catch (error) {
-      console.error('❌ Error during navbar sign out:', error);
-      
-      // Even if there's an error, navigate to home and reset state
-      navigate('/');
-      setIsUserMenuOpen(false);
-      setIsMenuOpen(false);
-      
-    } finally {
-      // Reset signing out state
+      console.error('Sign out failed:', error);
+      // Even on failure, reset the state
       setIsSigningOut(false);
     }
   };

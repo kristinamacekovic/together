@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ConversationPage from './pages/ConversationPage';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route path="/conversation/:conversationUrl" element={<ConversationPage />} />
           </Routes>
         </Layout>
       </Router>

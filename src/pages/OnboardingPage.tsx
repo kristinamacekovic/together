@@ -92,15 +92,17 @@ const OnboardingPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user) {
-      setError('You must be logged in to complete onboarding');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
     try {
+      // Get the current user directly from Supabase to ensure we have the latest session data
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error(userError?.message || 'You must be logged in to complete onboarding.');
+      }
+
       // Save initial form data
       const { error: formError } = await supabase
         .from('initial_forms')
@@ -132,7 +134,7 @@ const OnboardingPage: React.FC = () => {
       // Navigate to dashboard
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to save onboarding data');
+      setError(err.message || 'Failed to save onboarding data. Please try again.');
     } finally {
       setLoading(false);
     }
