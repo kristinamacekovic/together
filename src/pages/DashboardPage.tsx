@@ -74,7 +74,6 @@ const DashboardPage: React.FC = () => {
   const userId = user?.id;
   const [initialForm, setInitialForm] = useState<InitialForm | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [editableField, setEditableField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState<any>('');
@@ -86,19 +85,10 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchUserData = useCallback(async () => {
-    if (!userId || !mountedRef.current) {
-      console.log('❌ No user available for data fetch or component unmounted');
-      setLoading(false);
-      return;
-    }
-    
+    if (!userId) return;
+
     try {
-      console.log('📊 Starting dashboard data fetch for user:', userId);
-      setError('');
-      setLoading(true);
-      
       // Fetch initial form data
-      console.log('📝 Fetching initial form data...');
       const { data: formData, error: formError } = await supabase
         .from('initial_forms')
         .select('*')
@@ -106,77 +96,40 @@ const DashboardPage: React.FC = () => {
         .single();
 
       // Fetch goals
-      console.log('🎯 Fetching goals data...');
       const { data: goalsData, error: goalsError } = await supabase
         .from('goals')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (!mountedRef.current) {
-        console.log('🚫 Component unmounted, skipping state updates');
-        return;
-      }
+      if (!mountedRef.current) return;
 
-      // Handle form data
-      if (formError) {
-        if (formError.code === 'PGRST116') {
-          console.log('ℹ️ No onboarding data found - user can fill it in');
-          setHasOnboardingData(false);
-          setInitialForm(null);
-        } else {
-          console.error('❌ Form data error:', formError);
-          throw new Error(`Failed to load profile data: ${formError.message}`);
-        }
+      if (formError && formError.code !== 'PGRST116') {
+        throw new Error(`Failed to load profile data: ${formError.message}`);
       } else {
-        console.log('✅ Form data loaded successfully');
         setInitialForm(formData);
-        setHasOnboardingData(true);
+        setHasOnboardingData(!!formData);
       }
 
-      // Handle goals data
       if (goalsError) {
-        console.error('❌ Goals data error:', goalsError);
         throw new Error(`Failed to load goals: ${goalsError.message}`);
       } else {
-        console.log('✅ Goals loaded successfully:', goalsData?.length || 0, 'goals');
         setGoals(goalsData || []);
       }
-
-      console.log('🎉 Dashboard data fetch completed successfully');
-
     } catch (error: any) {
-      console.error('💥 Error in fetchUserData:', error);
       if (mountedRef.current) {
-        setError(error.message || 'Failed to load dashboard data. Please try again.');
-        // Set defaults so the page still renders
-        setHasOnboardingData(false);
-        setInitialForm(null);
-        setGoals([]);
-      }
-    } finally {
-      if (mountedRef.current) {
-        console.log('🏁 Dashboard data fetch finished, setting loading to false');
-        setLoading(false);
+        setError(error.message || 'Failed to load dashboard data.');
       }
     }
   }, [userId]);
 
   useEffect(() => {
     mountedRef.current = true;
-    
-    if (userId) {
-      console.log('🚀 Dashboard: User found, starting data fetch...');
-      fetchUserData();
-    } else {
-      console.log('❌ Dashboard: No user found');
-      setLoading(false);
-    }
-
+    fetchUserData();
     return () => {
       mountedRef.current = false;
     };
-  }, [userId, fetchUserData]);
+  }, [fetchUserData]);
 
   const createConversation = async () => {
     if (!initialForm) {
@@ -313,19 +266,6 @@ const DashboardPage: React.FC = () => {
     }
     return !value || value === '';
   };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gruvbox-orange border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gruvbox-fg2 text-lg font-medium">Loading your dashboard...</p>
-          <p className="text-sm text-gruvbox-fg4 mt-2">This should only take a moment</p>
-        </div>
-      </div>
-    );
-  }
 
   // Show error state with retry option
   if (error) {

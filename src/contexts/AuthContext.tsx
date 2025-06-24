@@ -33,123 +33,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutInProgressRef = useRef(false);
 
   useEffect(() => {
-    mountedRef.current = true;
-    
-    const initializeAuth = async () => {
+    const fetchSession = async () => {
       try {
-        console.log('🔄 Initializing auth...');
+        setLoading(true);
         
-        // Get initial session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!mountedRef.current) return;
-        
-        if (error) {
-          console.error('❌ Error getting initial session:', error);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('✅ Initial session loaded:', session?.user?.email || 'No user');
-        
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setLoading(false);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
         }
       } catch (error) {
-        console.error('❌ Error in initializeAuth:', error);
-        if (mountedRef.current) {
-          setLoading(false);
-        }
+        console.error("Error fetching initial session:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    initializeAuth();
+    fetchSession();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mountedRef.current) return;
-      
-      console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
-      
-      setSession(session); // Set session immediately
-
-      if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out - clearing user/profile state');
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-
-      if (session?.user) {
-        const profileExists = await fetchProfile(session.user.id);
-        if (profileExists && mountedRef.current) {
-          // Profile exists, user is valid
-          setUser(session.user);
-        } else if (mountedRef.current) {
-          // No profile found for a valid session, treat as logged out
-          console.warn('⚠️ No profile found for user, clearing session.');
-          setUser(null);
-          setProfile(null);
-          // Optionally, sign them out completely to clear the invalid JWT
-          await supabase.auth.signOut();
-        }
-      } else {
-        // No session user
-        setUser(null);
-        setProfile(null);
-      }
-      setLoading(false); // Set loading to false after all checks
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
     });
 
     return () => {
-      console.log('🧹 Cleaning up auth context');
-      mountedRef.current = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
-  const fetchProfile = async (userId: string): Promise<boolean> => {
-    if (!mountedRef.current) return false;
+  const fetchProfile = async (userId: string) => {
     try {
-      console.log('📋 [fetchProfile] Start for user:', userId);
-      setLoading(true); // Set loading true at the start of the fetch
-      console.log('📋 [fetchProfile] Before supabase.from().select()');
-      const { data, error } = await supabase
+      const { data, error, status } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`*`)
         .eq('id', userId)
         .single();
-      console.log('📋 [fetchProfile] After supabase.from().select()', { data, error });
 
-      if (!mountedRef.current) return false;
+      if (error && status !== 406) {
+        throw error;
+      }
 
-      if (error) {
-        console.error('❌ Error fetching profile:', error);
-        setProfile(null);
-        return false; // Profile does not exist or error occurred
-      } else {
-        console.log('✅ Profile fetched successfully');
+      if (data) {
         setProfile(data);
-        return true; // Profile exists
       }
     } catch (error) {
-      console.error('❌ Error in fetchProfile:', error);
-      if (mountedRef.current) {
-        setProfile(null);
-      }
-      return false;
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+      console.error('Error fetching profile:', error);
     }
   };
 
@@ -175,66 +106,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    try {
-      console.log('🔑 Starting sign in...');
-      
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      console.log('🔑 Sign in result:', error ? 'Error' : 'Success');
-      return { error };
-      
-    } catch (error) {
-      console.error('❌ Sign in error:', error);
-      return { error };
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
   };
 
   const signOut = async () => {
-    // Prevent multiple simultaneous sign out attempts
-    if (signOutInProgressRef.current) {
-      console.log('⏳ Sign out already in progress, skipping...');
-      return;
-    }
-
-    try {
-      console.log('👋 Starting sign out process...');
-      signOutInProgressRef.current = true;
-      const { error } = await supabase.auth.signOut();
-      console.log('🔄 supabase.auth.signOut() finished', error);
-      if (error) {
-        console.error('❌ Supabase sign out error:', error);
-        throw error;
-      }
-
-      console.log('✅ Supabase sign out successful');
-
-      // Clear state immediately (the auth state change listener will also handle this)
-      if (mountedRef.current) {
-        setUser(null);
-        setProfile(null);
-        setSession(null);
-      }
-
-      console.log('✅ Sign out completed successfully');
-
-    } catch (error) {
-      console.error('❌ Error during sign out:', error);
-
-      // Even if there's an error, clear the state to ensure UI consistency
-      if (mountedRef.current) {
-        setUser(null);
-        setProfile(null);
-        setSession(null);
-      }
-
-      // Re-throw the error so the UI can handle it
-      throw error;
-    } finally {
-      signOutInProgressRef.current = false;
-    }
+    await supabase.auth.signOut();
+    setProfile(null); // Clear profile on sign out
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {

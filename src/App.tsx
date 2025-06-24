@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
@@ -12,30 +12,49 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route 
-              path="/onboarding" 
-              element={
-                <ProtectedRoute>
-                  <OnboardingPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route path="/conversation/:conversationUrl" element={<ConversationPage />} />
-          </Routes>
-        </Layout>
+        <AppContent />
       </Router>
     </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-gruvbox-orange border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gruvbox-fg2">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route 
+          path="/onboarding" 
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/conversation/:conversationUrl" element={<ConversationPage />} />
+      </Routes>
+    </Layout>
   );
 }
 
