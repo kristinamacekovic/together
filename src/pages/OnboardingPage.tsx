@@ -6,7 +6,6 @@ import {
   Brain, 
   Target, 
   Clock, 
-  BookOpen, 
   TrendingUp, 
   CheckCircle,
   ArrowRight,

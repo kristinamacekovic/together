@@ -29,8 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const mountedRef = useRef(true);
-  const signOutInProgressRef = useRef(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -127,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .update(updates)
         .eq('id', user.id);
 
-      if (!error && mountedRef.current) {
+      if (!error) {
         setProfile(prev => prev ? { ...prev, ...updates } : null);
       }
 

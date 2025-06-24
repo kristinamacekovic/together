@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, InitialForm, Goal } from '../lib/supabase';
+import { supabase, InitialForm, Goal, Session } from '../lib/supabase';
 import { 
   Brain, 
   Target, 
@@ -14,7 +14,6 @@ import {
   Zap,
   Heart,
   Settings,
-  CheckCircle,
   Plus,
   RefreshCw,
   AlertCircle
@@ -74,6 +73,7 @@ const DashboardPage: React.FC = () => {
   const userId = user?.id;
   const [initialForm, setInitialForm] = useState<InitialForm | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [error, setError] = useState<string>('');
   const [editableField, setEditableField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState<any>('');
@@ -88,19 +88,16 @@ const DashboardPage: React.FC = () => {
     if (!userId) return;
 
     try {
-      // Fetch initial form data
-      const { data: formData, error: formError } = await supabase
-        .from('initial_forms')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      // Fetch goals
-      const { data: goalsData, error: goalsError } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      // Fetch in parallel
+      const [
+        { data: formData, error: formError },
+        { data: goalsData, error: goalsError },
+        { data: sessionsData, error: sessionsError }
+      ] = await Promise.all([
+        supabase.from('initial_forms').select('*').eq('user_id', userId).single(),
+        supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('sessions').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+      ]);
 
       if (!mountedRef.current) return;
 
@@ -116,6 +113,12 @@ const DashboardPage: React.FC = () => {
       } else {
         setGoals(goalsData || []);
       }
+
+      if (sessionsError) {
+        throw new Error(`Failed to load sessions: ${sessionsError.message}`);
+      } else {
+        setSessions(sessionsData || []);
+      }
     } catch (error: any) {
       if (mountedRef.current) {
         setError(error.message || 'Failed to load dashboard data.');
@@ -130,6 +133,23 @@ const DashboardPage: React.FC = () => {
       mountedRef.current = false;
     };
   }, [fetchUserData]);
+
+  const sessionStats = React.useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+
+    const sessionsToday = sessions.filter(s => new Date(s.created_at) >= today).length;
+    const sessionsThisWeek = sessions.filter(s => new Date(s.created_at) >= startOfWeek).length;
+    const totalHours = sessions.reduce((acc, s) => acc + (s.actual_duration || s.planned_duration || 0), 0) / 60;
+
+    return {
+      sessionsToday,
+      sessionsThisWeek,
+      totalHours: totalHours.toFixed(1),
+    };
+  }, [sessions]);
 
   const createConversation = async () => {
     if (!initialForm) {
@@ -351,7 +371,7 @@ const DashboardPage: React.FC = () => {
               <Clock className="w-6 h-6 text-gruvbox-green" />
             </div>
             <h3 className="text-lg font-semibold text-gruvbox-fg0 mb-1">Sessions Today</h3>
-            <p className="text-2xl font-bold text-gruvbox-green">0</p>
+            <p className="text-2xl font-bold text-gruvbox-green">{sessionStats.sessionsToday}</p>
           </div>
 
           <div className="card text-center">
@@ -359,7 +379,7 @@ const DashboardPage: React.FC = () => {
               <TrendingUp className="w-6 h-6 text-gruvbox-purple" />
             </div>
             <h3 className="text-lg font-semibold text-gruvbox-fg0 mb-1">This Week</h3>
-            <p className="text-2xl font-bold text-gruvbox-purple">0</p>
+            <p className="text-2xl font-bold text-gruvbox-purple">{sessionStats.sessionsThisWeek}</p>
           </div>
 
           <div className="card text-center">
@@ -367,7 +387,7 @@ const DashboardPage: React.FC = () => {
               <Brain className="w-6 h-6 text-gruvbox-blue" />
             </div>
             <h3 className="text-lg font-semibold text-gruvbox-fg0 mb-1">Total Hours</h3>
-            <p className="text-2xl font-bold text-gruvbox-blue">0</p>
+            <p className="text-2xl font-bold text-gruvbox-blue">{sessionStats.totalHours}</p>
           </div>
         </div>
 
