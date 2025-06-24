@@ -66,12 +66,17 @@ serve(async (req) => {
     console.log('TAVUS_REPLICA_ID:', TAVUS_REPLICA_ID);
     console.log('TAVUS_PERSONA_ID:', TAVUS_PERSONA_ID);
     console.log('TAVUS_API_KEY:', TAVUS_API_KEY ? 'set' : 'not set');
+    const properties = {
+      max_call_duration: preferred_session_length ? preferred_session_length * 60 : undefined, // in seconds
+      participant_left_timeout: 60, // in seconds
+    };
     console.log('Tavus payload:', {
       replica_id: TAVUS_REPLICA_ID,
       persona_id: TAVUS_PERSONA_ID,
       conversational_context,
       conversation_name: `Study Session with ${user.email || user.id} on ${new Date().toLocaleString()}`,
       callback_url,
+      properties,
     });
 
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
@@ -86,6 +91,7 @@ serve(async (req) => {
         conversational_context,
         conversation_name: `Study Session with ${user.email || user.id} on ${new Date().toLocaleString()}`,
         callback_url,
+        properties,
       }),
     })
 
@@ -97,16 +103,16 @@ serve(async (req) => {
     const tavusData = await tavusResponse.json()
 
     const { error: dbError } = await supabaseClient
-      .from('focus_sessions')
+      .from('sessions')
       .insert({
         user_id: user.id,
+        title: tavusData.conversation_name,
+        planned_duration: preferred_session_length,
         conversation_id: tavusData.conversation_id,
         conversation_url: tavusData.conversation_url,
-        conversation_name: tavusData.conversation_name,
-        replica_id: tavusData.replica_id,
-        persona_id: tavusData.persona_id,
-        status: tavusData.status,
-        requested_session_length: preferred_session_length,
+        // The 'status' column in the 'sessions' table defaults to 'planned'
+        // and has a different type ('session_status' enum) than the 'active' status from Tavus.
+        // We will let the database handle the default value.
       })
 
     if (dbError) {
