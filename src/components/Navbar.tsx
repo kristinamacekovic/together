@@ -11,8 +11,20 @@ const Navbar: React.FC = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showLogo, setShowLogo] = useState(false);
   
   const { user, profile, signOut } = useAuth();
+
+  // Handle scroll to show/hide logo
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show logo when scrolled past the hero brand (approximately 200px)
+      setShowLogo(window.scrollY > 200);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Reset menu states when user changes
   useEffect(() => {
@@ -33,14 +45,11 @@ const Navbar: React.FC = () => {
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
-    // The useEffect hook watching `user` will reset the signing out state
-    // once the user is null, so we don't need to do it here.
     try {
       await signOut();
       navigate('/');
     } catch (error) {
       console.error('Sign out failed:', error);
-      // Even on failure, reset the state
       setIsSigningOut(false);
     }
   };
@@ -68,26 +77,32 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="bg-gruvbox-dark/95 backdrop-blur-sm shadow-lg border-b border-gruvbox-gray-244/20 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-10 h-10 gruvbox-accent-gradient rounded-lg flex items-center justify-center">
-                <Brain className="h-6 w-6 text-gruvbox-dark" />
+      <nav className="bg-background-primary/80 backdrop-blur-md border-b border-surface-border/20 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="relative flex items-center h-20">
+            {/* Logo - only show when scrolled, aligned with hero */}
+            <div className="w-full flex items-center">
+              <div className={`transition-all duration-300 ${
+                showLogo ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
+              }`}>
+                <span 
+                  className="text-2xl font-bold text-text-primary cursor-pointer"
+                  onClick={() => navigate('/')}
+                >
+                  Together
+                </span>
               </div>
-              <span className="text-2xl font-bold gradient-text">Together</span>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium">
+            {/* Desktop Navigation - positioned on the right */}
+            <div className="hidden md:flex items-center space-x-8 absolute right-6 lg:right-12">
+              <a href="#features" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
                 Features
               </a>
-              <a href="#how-it-works" className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium">
+              <a href="#how-it-works" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
                 How It Works
               </a>
-              <a href="#benefits" className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium">
+              <a href="#benefits" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
                 Benefits
               </a>
               
@@ -95,13 +110,13 @@ const Navbar: React.FC = () => {
                 <div className="relative user-menu-container">
                   <button
                     onClick={() => !isSigningOut && setIsUserMenuOpen(!isUserMenuOpen)}
-                    className={`flex items-center space-x-2 text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors ${
+                    className={`flex items-center space-x-3 text-text-secondary hover:text-experimental-pink transition-colors ${
                       isSigningOut ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                     disabled={isSigningOut}
                   >
-                    <div className="w-8 h-8 bg-gruvbox-orange rounded-full flex items-center justify-center">
-                      <User className="w-5 h-5 text-gruvbox-dark" />
+                    <div className="w-8 h-8 bg-experimental-pink rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-background-primary" />
                     </div>
                     <span className="font-medium">
                       {isSigningOut ? 'Signing out...' : (profile?.full_name || 'User')}
@@ -109,13 +124,13 @@ const Navbar: React.FC = () => {
                   </button>
                   
                   {isUserMenuOpen && !isSigningOut && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gruvbox-dark-soft border border-gruvbox-gray-244/20 rounded-lg shadow-xl py-2 z-50">
-                      <div className="px-4 py-2 border-b border-gruvbox-gray-244/20">
-                        <p className="text-sm text-gruvbox-fg2 truncate">{profile?.email}</p>
+                    <div className="absolute right-0 mt-3 w-48 bg-surface-elevated border border-surface-border rounded-xl py-2 z-50">
+                      <div className="px-4 py-3 border-b border-surface-border">
+                        <p className="text-sm text-text-tertiary truncate">{profile?.email}</p>
                       </div>
                       <button
                         onClick={handleDashboardClick}
-                        className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2"
+                        className="w-full text-left px-4 py-3 text-text-secondary hover:bg-surface-hover hover:text-experimental-pink transition-colors flex items-center space-x-3"
                       >
                         <Settings className="w-4 h-4" />
                         <span>Dashboard</span>
@@ -123,7 +138,7 @@ const Navbar: React.FC = () => {
                       <button
                         onClick={handleSignOut}
                         disabled={isSigningOut}
-                        className="w-full text-left px-4 py-2 text-gruvbox-fg2 hover:bg-gruvbox-dark hover:text-gruvbox-orange transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-4 py-3 text-text-secondary hover:bg-surface-hover hover:text-experimental-pink transition-colors flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
@@ -132,94 +147,94 @@ const Navbar: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-6">
                   <button
                     onClick={() => handleAuthClick('signin')}
-                    className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium"
+                    className="text-text-secondary hover:text-experimental-pink transition-colors font-medium"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={() => handleAuthClick('signup')}
-                    className="btn btn-primary"
+                    className="bg-experimental-electric hover:bg-experimental-electric-hover text-text-primary font-semibold px-6 py-2 rounded-lg transition-colors"
                   >
-                    Start Studying Free
+                    Get Started
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors"
-                disabled={isSigningOut}
-              >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
+            {/* Mobile menu button - positioned on the right */}
+            <div className="md:hidden absolute right-6">
+                              <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="text-text-secondary hover:text-experimental-purple transition-colors"
+                  disabled={isSigningOut}
+                >
+                  {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </button>
             </div>
           </div>
 
           {/* Mobile Navigation */}
           {isMenuOpen && (
-            <div className="md:hidden py-4 border-t border-gruvbox-gray-244/20">
+            <div className="md:hidden py-6 border-t border-surface-border/30">
               <div className="flex flex-col space-y-4">
-                <a href="#features" className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium">
+                <a href="#features" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
                   Features
                 </a>
-                <a href="#how-it-works" className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium">
+                <a href="#how-it-works" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
                   How It Works
                 </a>
-                <a href="#benefits" className="text-gruvbox-fg2 hover:text-gruvbox-orange transition-colors font-medium">
+                <a href="#benefits" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
                   Benefits
                 </a>
                 
                 {user ? (
-                  <div className="pt-4 border-t border-gruvbox-gray-244/20">
+                  <div className="pt-4 border-t border-surface-border/30">
                     <div className="flex items-center space-x-3 mb-4">
-                      <div className="w-8 h-8 bg-gruvbox-orange rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-gruvbox-dark" />
-                      </div>
+                                              <div className="w-8 h-8 bg-experimental-pink rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-background-primary" />
+                        </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gruvbox-fg1 truncate">
+                        <p className="font-medium text-text-primary truncate">
                           {isSigningOut ? 'Signing out...' : (profile?.full_name || 'User')}
                         </p>
-                        <p className="text-sm text-gruvbox-fg3 truncate">{profile?.email}</p>
+                        <p className="text-sm text-text-tertiary truncate">{profile?.email}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <button
                         onClick={handleDashboardClick}
-                        className="btn btn-secondary w-full"
+                        className="w-full bg-surface-elevated hover:bg-surface-hover text-text-primary font-medium px-4 py-3 rounded-lg transition-colors flex items-center space-x-3"
                         disabled={isSigningOut}
                       >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Dashboard
+                        <Settings className="w-4 h-4" />
+                        <span>Dashboard</span>
                       </button>
                       <button
                         onClick={handleSignOut}
                         disabled={isSigningOut}
-                        className="btn btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-surface-elevated hover:bg-surface-hover text-text-secondary font-medium px-4 py-3 rounded-lg transition-colors flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        {isSigningOut ? 'Signing out...' : 'Sign Out'}
+                        <LogOut className="w-4 h-4" />
+                        <span>{isSigningOut ? 'Signing out...' : 'Sign Out'}</span>
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="pt-4 border-t border-gruvbox-gray-244/20 space-y-3">
+                  <div className="pt-4 border-t border-surface-border/30 space-y-3">
                     <button
                       onClick={() => handleAuthClick('signin')}
-                      className="btn btn-secondary w-full"
+                      className="w-full text-text-secondary hover:text-experimental-pink transition-colors font-medium py-2 text-left"
                     >
                       Sign In
                     </button>
                     <button
                       onClick={() => handleAuthClick('signup')}
-                      className="btn btn-primary w-full"
+                      className="w-full bg-experimental-electric hover:bg-experimental-electric-hover text-text-primary font-semibold px-4 py-3 rounded-lg transition-colors"
                     >
-                      Start Studying Free
+                      Get Started
                     </button>
                   </div>
                 )}

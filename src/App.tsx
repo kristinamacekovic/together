@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
-import HomePage from './pages/HomePage';
+import { HomePage } from './pages/HomePage';
 import OnboardingPage from './pages/OnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -22,10 +22,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gruvbox-dark flex items-center justify-center">
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gruvbox-orange border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gruvbox-fg2">Loading...</p>
+          <div className="w-16 h-16 border-4 border-experimental-electric border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-text-secondary">Loading...</p>
         </div>
       </div>
     );
