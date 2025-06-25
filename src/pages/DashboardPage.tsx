@@ -56,6 +56,129 @@ const defaultFormData: Partial<InitialForm> = {
   motivation_factors: []
 };
 
+// Activity Chart Component
+interface ActivityChartProps {
+  sessions: Session[];
+}
+
+const ActivityChart: React.FC<ActivityChartProps> = ({ sessions }) => {
+  // Group sessions by date over the last 14 days
+  const chartData = React.useMemo(() => {
+    const days = 14;
+    const data = [];
+    const today = new Date();
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const daysSessions = sessions.filter(session => {
+        const sessionDate = new Date(session.created_at).toISOString().split('T')[0];
+        return sessionDate === dateStr;
+      });
+      
+      data.push({
+        date: dateStr,
+        count: daysSessions.length,
+        totalMinutes: daysSessions.reduce((acc, s) => acc + (s.actual_duration || s.planned_duration || 0), 0),
+        label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      });
+    }
+    
+    return data;
+  }, [sessions]);
+
+  const maxCount = Math.max(...chartData.map(d => d.count), 1);
+  const height = 200;
+  const width = 800; // viewBox width
+  const padding = 40;
+  const chartWidth = width - (padding * 2);
+  const chartHeight = height - (padding * 2);
+
+  return (
+    <div className="w-full">
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} className="w-full">
+        {/* Grid lines */}
+        {[0, 1, 2, 3, 4].map(i => {
+          const y = padding + (chartHeight * i) / 4;
+          return (
+            <g key={i}>
+              <line
+                x1={padding}
+                y1={y}
+                x2={width - padding}
+                y2={y}
+                stroke="currentColor"
+                strokeOpacity="0.1"
+                className="text-text-muted"
+              />
+              <text
+                x={padding - 10}
+                y={y + 4}
+                textAnchor="end"
+                className="text-xs fill-text-tertiary"
+              >
+                {Math.round((maxCount * (4 - i)) / 4)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Chart line */}
+        <path
+          d={chartData.map((point, index) => {
+            const x = padding + (chartWidth * index) / (chartData.length - 1);
+            const y = padding + chartHeight - (chartHeight * point.count) / maxCount;
+            return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+          }).join(' ')}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          className="text-experimental-pink"
+        />
+
+        {/* Data points */}
+        {chartData.map((point, index) => {
+          const x = padding + (chartWidth * index) / (chartData.length - 1);
+          const y = padding + chartHeight - (chartHeight * point.count) / maxCount;
+          
+          return (
+            <g key={index}>
+              <circle
+                cx={x}
+                cy={y}
+                r="4"
+                fill="currentColor"
+                className="text-experimental-pink"
+              />
+              {/* Date labels */}
+              {index % 2 === 0 && (
+                <text
+                  x={x}
+                  y={height - 10}
+                  textAnchor="middle"
+                  className="text-xs fill-text-tertiary"
+                >
+                  {point.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      
+      {/* Legend */}
+      <div className="flex items-center justify-center mt-4 space-x-6 text-sm text-text-secondary">
+        <div className="flex items-center space-x-2">
+          <div className="w-3 h-3 rounded-full bg-experimental-pink"></div>
+          <span>Sessions per day</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DashboardPage: React.FC = () => {
   const { user, profile } = useAuth();
   const userId = user?.id;
@@ -315,9 +438,63 @@ const DashboardPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-6 lg:px-12 py-12">
         {/* Hero-style Header */}
         <div className="mb-16">
-          <h1 className="text-4xl lg:text-6xl font-black text-text-primary mb-8 leading-tight">
-            Welcome back, {profile?.full_name?.split(' ')[0]?.toLowerCase() || 'username'}
-          </h1>
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-8 gap-8">
+            <h1 className="text-4xl lg:text-6xl font-black text-text-primary leading-tight">
+              Welcome back, {profile?.full_name?.split(' ')[0]?.toLowerCase() || 'username'}
+            </h1>
+            
+            {/* Session Launcher - positioned to the right */}
+            <div className="flex-shrink-0">
+              {sessionUrl ? (
+                <div className="text-center lg:text-right space-y-4">
+                  <div className="text-lg font-medium text-text-primary">
+                    Your session is ready
+                  </div>
+                  <a
+                    href={sessionUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink font-bold transition-all duration-300 hover:scale-105 hover:tracking-wide"
+                  >
+                    JOIN SESSION →
+                  </a>
+                  <div>
+                    <button
+                      onClick={() => setSessionUrl(null)}
+                      className="text-text-muted hover:text-text-secondary transition-colors text-sm"
+                    >
+                      Create another session
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center lg:text-right space-y-4">
+                  <div className="text-lg font-medium text-text-primary">
+                    Ready to start?
+                  </div>
+                  <button
+                    onClick={createConversation}
+                    disabled={isCreatingSession || !hasOnboardingData}
+                    className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink disabled:text-text-muted font-bold transition-all duration-300 disabled:cursor-not-allowed hover:scale-105 hover:tracking-wide"
+                  >
+                    {isCreatingSession ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-3"></div>
+                        CREATING...
+                      </div>
+                    ) : (
+                      'START SESSION →'
+                    )}
+                  </button>
+                  {!hasOnboardingData && (
+                    <div className="text-text-muted text-xs max-w-xs">
+                      Complete your profile below to enable sessions
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
           
           {/* Tab Navigation */}
           <div className="flex space-x-8 mb-12">
@@ -357,7 +534,7 @@ const DashboardPage: React.FC = () => {
             {/* Learning Objectives - Minimal Style */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl lg:text-3xl font-medium text-text-primary">
+                <h3 className="text-lg font-medium text-text-primary">
                   I'm focusing on
                 </h3>
                 {editableField?.field !== 'learning_objectives' && (
@@ -375,7 +552,7 @@ const DashboardPage: React.FC = () => {
                   <textarea
                     value={editValue as string}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className="w-full bg-transparent text-text-primary text-xl lg:text-2xl border-0 border-b-2 border-dotted border-text-muted focus:border-experimental-pink focus:outline-none resize-none pb-2"
+                    className="w-full bg-transparent text-text-primary border-0 border-b-2 border-dotted border-text-muted focus:border-experimental-pink focus:outline-none resize-none pb-2"
                     rows={2}
                     placeholder="your learning goals..."
                   />
@@ -397,7 +574,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div 
-                  className="text-xl lg:text-2xl border-b-2 border-dotted border-text-muted pb-2 cursor-pointer hover:border-experimental-pink transition-colors"
+                  className="border-b-2 border-dotted border-text-muted pb-2 cursor-pointer hover:border-experimental-pink transition-colors"
                   onClick={() => startEditing('learning_objectives')}
                 >
                   {getFieldValue('learning_objectives') ? (
@@ -414,7 +591,7 @@ const DashboardPage: React.FC = () => {
             {/* Study Subjects - Minimal Style */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl lg:text-3xl font-medium text-text-primary">
+                <h3 className="text-lg font-medium text-text-primary">
                   My subjects of interest are
                 </h3>
                 {editableField?.field !== 'study_subjects' && (
@@ -468,14 +645,14 @@ const DashboardPage: React.FC = () => {
                   {(getFieldValue('study_subjects') as string[])?.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {(getFieldValue('study_subjects') as string[]).map((subject, index) => (
-                        <span key={subject} className="text-xl lg:text-2xl text-experimental-pink font-medium">
+                        <span key={subject} className="text-experimental-pink font-medium">
                           {subject}
                           {index < (getFieldValue('study_subjects') as string[]).length - 1 && ', '}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <span className="text-xl lg:text-2xl text-text-secondary">your subjects...</span>
+                    <span className="text-text-secondary">your subjects...</span>
                   )}
                 </div>
               )}
@@ -743,59 +920,7 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Prominent Session Launcher */}
-            <div className="pt-16 border-t border-text-muted/20">
-              <div className="text-center">
-                {sessionUrl ? (
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-2xl lg:text-3xl font-medium text-text-primary">
-                        Your session is ready
-                      </h3>
-                      <a
-                        href={sessionUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block bg-experimental-electric hover:bg-experimental-electric-hover text-text-primary font-bold py-4 px-12 rounded-lg transition-all duration-200 hover:scale-105 text-lg"
-                      >
-                        JOIN SESSION →
-                      </a>
-                    </div>
-                    <button
-                      onClick={() => setSessionUrl(null)}
-                      className="text-text-muted hover:text-text-secondary transition-colors"
-                    >
-                      Create another session
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <h3 className="text-2xl lg:text-3xl font-medium text-text-primary">
-                      Ready to start?
-                    </h3>
-                    <button
-                      onClick={createConversation}
-                      disabled={isCreatingSession || !hasOnboardingData}
-                      className="bg-experimental-electric hover:bg-experimental-electric-hover disabled:bg-surface-border disabled:text-text-muted text-text-primary font-bold py-4 px-12 rounded-lg transition-all duration-200 hover:scale-105 disabled:hover:scale-100 text-lg"
-                    >
-                      {isCreatingSession ? (
-                        <div className="flex items-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-text-primary mr-3"></div>
-                          CREATING...
-                        </div>
-                      ) : (
-                        'START SESSION'
-                      )}
-                    </button>
-                    {!hasOnboardingData && (
-                      <p className="text-text-muted text-sm">
-                        Complete your profile above to enable sessions
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+
           </div>
         )}
 
@@ -828,6 +953,16 @@ const DashboardPage: React.FC = () => {
                 <div className="text-text-secondary">Total hours</div>
               </div>
             </div>
+
+            {/* Activity Chart */}
+            {sessions.length > 0 && (
+              <div className="space-y-6">
+                <h3 className="text-2xl font-medium text-text-primary">Activity over time</h3>
+                <div className="bg-background-secondary/30 p-6 rounded-xl border border-surface-border/20">
+                  <ActivityChart sessions={sessions} />
+                </div>
+              </div>
+            )}
 
             {/* Recent Sessions */}
             {sessions.length > 0 && (

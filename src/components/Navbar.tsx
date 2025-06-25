@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Brain, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -14,17 +15,23 @@ const Navbar: React.FC = () => {
   const [showLogo, setShowLogo] = useState(false);
   
   const { user, profile, signOut } = useAuth();
+  
+  // Check if we're on dashboard page
+  const isDashboardPage = location.pathname === '/dashboard';
 
   // Handle scroll to show/hide logo
   useEffect(() => {
     const handleScroll = () => {
-      // Show logo when scrolled past the hero brand (approximately 200px)
-      setShowLogo(window.scrollY > 200);
+      // Always show logo on dashboard, or when scrolled past hero on other pages
+      setShowLogo(isDashboardPage || window.scrollY > 200);
     };
 
+    // Set initial state
+    handleScroll();
+    
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isDashboardPage]);
 
   // Reset menu states when user changes
   useEffect(() => {
