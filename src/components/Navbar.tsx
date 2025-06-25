@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain, Menu, X, User, LogOut, Settings, ArrowRight } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 

@@ -401,13 +401,7 @@ const DashboardPage: React.FC = () => {
     return initialForm?.[field] ?? defaultFormData[field];
   };
 
-  const isFieldEmpty = (field: keyof InitialForm) => {
-    const value = getFieldValue(field);
-    if (Array.isArray(value)) {
-      return value.length === 0;
-    }
-    return !value || value === '';
-  };
+
 
   // Show error state with retry option
   if (error) {
