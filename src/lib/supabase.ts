@@ -52,13 +52,16 @@ export interface InitialForm {
 export interface Session {
   id: string;
   user_id: string;
-  goal_id?: string;
-  title: string;
-  planned_duration: number;
-  actual_duration?: number;
-  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  conversation_id: string;
+  conversation_url?: string;
+  conversation_name?: string;
+  replica_id?: string;
+  persona_id?: string;
+  status?: string;
+  requested_session_length?: number;
+  actual_duration?: number; // Duration in minutes from Tavus webhook
   started_at?: string;
-  completed_at?: string;
+  ended_at?: string;
   created_at: string;
 }
 

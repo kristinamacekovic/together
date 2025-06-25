@@ -124,17 +124,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
         </div>
 
         {signupSuccess ? (
-          <div className="p-6 space-y-4">
-            <div className="bg-success-50 border border-success-500/30 text-success-700 p-4 rounded-lg text-center">
-              <h3 className="font-bold text-lg mb-2">Success!</h3>
-              <p className="text-sm">We've sent a confirmation link to <strong>{email}</strong>.</p>
-              <p className="text-sm mt-2">Please click the link in the email to complete your registration and sign in.</p>
+          <div className="p-6 space-y-6">
+            <div className="bg-background-secondary/30 border border-experimental-pink/20 p-6 rounded-xl text-center space-y-4">
+              <div className="w-16 h-16 bg-experimental-pink/20 border border-experimental-pink/30 rounded-full flex items-center justify-center mx-auto">
+                <Mail className="w-8 h-8 text-experimental-pink" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-text-primary mb-2">CHECK YOUR EMAIL</h3>
+                <p className="text-text-secondary">We've sent a confirmation link to</p>
+                <p className="text-experimental-pink font-medium">{email}</p>
+                <p className="text-text-secondary mt-3">Please click the link in the email to complete your registration and sign in.</p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="w-full bg-surface-hover hover:bg-surface-active text-text-primary font-semibold py-3 px-4 rounded-lg transition-colors"
+              className="w-full text-xl font-bold text-experimental-electric hover:text-experimental-pink transition-all duration-300 py-4 uppercase tracking-wide"
             >
-              Close
+              CLOSE
             </button>
           </div>
         ) : (

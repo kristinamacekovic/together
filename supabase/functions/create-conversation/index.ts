@@ -106,13 +106,13 @@ serve(async (req) => {
       .from('sessions')
       .insert({
         user_id: user.id,
-        title: tavusData.conversation_name,
-        planned_duration: preferred_session_length,
+        conversation_name: tavusData.conversation_name,
+        requested_session_length: preferred_session_length,
         conversation_id: tavusData.conversation_id,
         conversation_url: tavusData.conversation_url,
-        // The 'status' column in the 'sessions' table defaults to 'planned'
-        // and has a different type ('session_status' enum) than the 'active' status from Tavus.
-        // We will let the database handle the default value.
+        replica_id: TAVUS_REPLICA_ID,
+        persona_id: TAVUS_PERSONA_ID,
+        status: 'created',
       })
 
     if (dbError) {

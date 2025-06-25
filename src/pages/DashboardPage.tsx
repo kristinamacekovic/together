@@ -81,7 +81,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ sessions }) => {
       data.push({
         date: dateStr,
         count: daysSessions.length,
-        totalMinutes: daysSessions.reduce((acc, s) => acc + (s.actual_duration || s.planned_duration || 0), 0),
+        totalMinutes: daysSessions.reduce((acc, s) => acc + (s.actual_duration || s.requested_session_length || 25), 0),
         label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       });
     }
@@ -254,7 +254,7 @@ const DashboardPage: React.FC = () => {
 
     const sessionsToday = sessions.filter(s => new Date(s.created_at) >= today).length;
     const sessionsThisWeek = sessions.filter(s => new Date(s.created_at) >= startOfWeek).length;
-    const totalHours = sessions.reduce((acc, s) => acc + (s.actual_duration || s.planned_duration || 0), 0) / 60;
+    const totalHours = sessions.reduce((acc, s) => acc + (s.actual_duration || s.requested_session_length || 25), 0) / 60;
 
     return {
       sessionsToday,
@@ -298,6 +298,16 @@ const DashboardPage: React.FC = () => {
     console.log('🔄 Retrying dashboard data fetch...');
     setError('');
     fetchUserData();
+  };
+
+  const handleSessionClick = (session: Session) => {
+    // If the session has a conversation URL, navigate directly to it
+    if (session.conversation_url) {
+      navigate(`/conversation/${encodeURIComponent(session.conversation_url)}`);
+    } else {
+      // Otherwise, create a new conversation
+      createConversation();
+    }
   };
 
   const startEditing = (field: keyof InitialForm) => {
@@ -383,8 +393,8 @@ const DashboardPage: React.FC = () => {
   };
 
   const formatSessionLength = (minutes: number) => {
-    const length = sessionLengths.find(l => l.value === minutes);
-    return length ? length.label : `${minutes} minutes`;
+    if (!minutes) return '0 minutes';
+    return `${minutes} minutes`;
   };
 
   const getFieldValue = (field: keyof InitialForm) => {
@@ -965,22 +975,34 @@ const DashboardPage: React.FC = () => {
             {/* Recent Sessions */}
             {sessions.length > 0 && (
               <div className="space-y-6">
-                <h3 className="text-2xl font-medium text-text-primary">Recent sessions</h3>
+                <div>
+                  <h3 className="text-2xl font-medium text-text-primary">Recent sessions</h3>
+                  <p className="text-text-secondary text-sm mt-1">Click any session to start a new conversation</p>
+                </div>
                 <div className="space-y-4">
                   {sessions.slice(0, 5).map((session) => (
-                    <div key={session.id} className="flex justify-between items-center py-3 border-b border-dotted border-text-muted">
+                    <button
+                      key={session.id}
+                      onClick={() => handleSessionClick(session)}
+                      className="w-full flex justify-between items-center py-3 border-b border-dotted border-text-muted hover:border-experimental-pink transition-colors text-left group"
+                    >
                       <div>
-                        <div className="text-text-primary">
-                          {new Date(session.created_at).toLocaleDateString()}
+                        <div className="text-text-primary group-hover:text-experimental-pink transition-colors">
+                          {session.conversation_name || new Date(session.created_at).toLocaleDateString()}
                         </div>
                         <div className="text-text-secondary text-sm">
-                          {formatSessionLength(session.actual_duration || session.planned_duration || 0)}
+                          {session.actual_duration 
+                            ? `${formatSessionLength(session.actual_duration)} (actual)` 
+                            : `${formatSessionLength(session.requested_session_length || 25)} (planned)`
+                          } • {session.status || 'created'}
                         </div>
                       </div>
-                      <div className="text-text-secondary text-sm">
-                        {session.status}
+                      <div className="flex items-center space-x-3">
+                        <div className="text-text-muted group-hover:text-experimental-pink transition-colors">
+                          {session.conversation_url ? 'CONTINUE →' : 'START NEW →'}
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
