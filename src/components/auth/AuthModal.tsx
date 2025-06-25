@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { X, Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface AuthModalProps {
@@ -108,16 +108,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gruvbox-dark/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gruvbox-dark-soft border border-gruvbox-gray-244/20 rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
+    <div className="fixed inset-0 bg-background-primary/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-surface-elevated border border-surface-border/30 rounded-2xl shadow-elegant-xl w-full max-w-md animate-slide-up">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gruvbox-gray-244/20">
-          <h2 className="text-2xl font-bold text-gruvbox-fg0">
+        <div className="flex items-center justify-between p-6 border-b border-surface-border/30">
+          <h2 className="text-2xl font-bold text-text-primary">
             {signupSuccess ? 'Check Your Email' : mode === 'signin' ? 'Welcome Back' : 'Join Together'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gruvbox-fg3 hover:text-gruvbox-orange transition-colors"
+            className="text-text-muted hover:text-experimental-pink transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -125,14 +125,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
 
         {signupSuccess ? (
           <div className="p-6 space-y-4">
-            <div className="bg-gruvbox-green/20 border border-gruvbox-green/30 text-gruvbox-green-bright p-4 rounded-lg text-center">
+            <div className="bg-success-50 border border-success-500/30 text-success-700 p-4 rounded-lg text-center">
               <h3 className="font-bold text-lg mb-2">Success!</h3>
               <p className="text-sm">We've sent a confirmation link to <strong>{email}</strong>.</p>
               <p className="text-sm mt-2">Please click the link in the email to complete your registration and sign in.</p>
             </div>
             <button
               onClick={onClose}
-              className="w-full btn btn-secondary"
+              className="w-full bg-surface-hover hover:bg-surface-active text-text-primary font-semibold py-3 px-4 rounded-lg transition-colors"
             >
               Close
             </button>
@@ -142,24 +142,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {error && (
-                <div className="bg-gruvbox-red/20 border border-gruvbox-red/30 text-gruvbox-red-bright p-4 rounded-lg text-sm">
+                <div className="bg-error-50 border border-error-500/30 text-error-700 p-4 rounded-lg text-sm">
                   {error}
                 </div>
               )}
 
               {mode === 'signup' && (
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gruvbox-fg2 mb-2">
+                  <label htmlFor="fullName" className="block text-sm font-medium text-text-secondary mb-2">
                     Full Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gruvbox-fg4 w-5 h-5" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
                     <input
                       type="text"
                       id="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-gruvbox-dark border border-gruvbox-gray-244/30 rounded-lg text-gruvbox-fg1 placeholder-gruvbox-fg4 focus:outline-none focus:ring-2 focus:ring-gruvbox-orange focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-3 bg-background-primary border border-surface-border/50 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-experimental-pink focus:border-transparent transition-all"
                       placeholder="Enter your full name"
                       required
                     />
@@ -168,17 +168,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gruvbox-fg2 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gruvbox-fg4 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
                   <input
                     type="email"
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-gruvbox-dark border border-gruvbox-gray-244/30 rounded-lg text-gruvbox-fg1 placeholder-gruvbox-fg4 focus:outline-none focus:ring-2 focus:ring-gruvbox-orange focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 bg-background-primary border border-surface-border/50 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-experimental-pink focus:border-transparent transition-all"
                     placeholder="Enter your email"
                     required
                   />
@@ -186,17 +186,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gruvbox-fg2 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gruvbox-fg4 w-5 h-5" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-gruvbox-dark border border-gruvbox-gray-244/30 rounded-lg text-gruvbox-fg1 placeholder-gruvbox-fg4 focus:outline-none focus:ring-2 focus:ring-gruvbox-orange focus:border-transparent"
+                    className="w-full pl-10 pr-12 py-3 bg-background-primary border border-surface-border/50 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-experimental-pink focus:border-transparent transition-all"
                     placeholder="Enter your password"
                     required
                     minLength={6}
@@ -204,7 +204,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gruvbox-fg4 hover:text-gruvbox-fg2 transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -214,21 +214,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group w-full flex items-center justify-center text-2xl font-bold text-experimental-electric hover:text-experimental-electric-hover transition-all duration-300 hover-glow disabled:opacity-50 disabled:cursor-not-allowed py-4"
               >
-                {loading ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+                {loading ? (
+                  'Please wait...'
+                ) : (
+                  <>
+                    <ArrowRight className="w-6 h-6 mr-3 group-hover:translate-x-2 transition-transform duration-300" />
+                    {mode === 'signin' ? 'SIGN IN.' : 'CREATE ACCOUNT.'}
+                  </>
+                )}
               </button>
             </form>
 
             {/* Footer */}
-            <div className="p-6 border-t border-gruvbox-gray-244/20 text-center">
-              <p className="text-gruvbox-fg3">
+            <div className="p-6 border-t border-surface-border/30 text-center">
+              <p className="text-text-tertiary">
                 {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
                 <button
                   onClick={switchMode}
-                  className="ml-2 text-gruvbox-orange hover:text-gruvbox-orange-bright font-medium transition-colors"
+                  className="group ml-2 text-experimental-pink hover:text-experimental-pink-hover font-medium transition-all duration-300 inline-flex items-center"
                 >
-                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                  <ArrowRight className="w-4 h-4 mr-1 group-hover:translate-x-1 transition-transform duration-300" />
+                  {mode === 'signin' ? 'SIGN UP' : 'SIGN IN'}
                 </button>
               </p>
             </div>

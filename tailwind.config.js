@@ -157,7 +157,7 @@ export default {
       },
       fontFamily: {
         sans: [
-          'Inter', 
+          'Bricolage Grotesque', 
           '-apple-system', 
           'BlinkMacSystemFont', 
           'Segoe UI', 
@@ -168,7 +168,7 @@ export default {
         ],
         mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
         display: [
-          'Inter', 
+          'Bricolage Grotesque', 
           '-apple-system', 
           'BlinkMacSystemFont', 
           'sans-serif'

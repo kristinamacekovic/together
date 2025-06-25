@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Brain, Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { Brain, Menu, X, User, LogOut, Settings, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 
@@ -96,7 +96,7 @@ const Navbar: React.FC = () => {
                   className="text-2xl font-bold text-text-primary cursor-pointer"
                   onClick={() => navigate('/')}
                 >
-                  Together
+                  together
                 </span>
               </div>
             </div>
@@ -154,20 +154,13 @@ const Navbar: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center space-x-6">
-                  <button
-                    onClick={() => handleAuthClick('signin')}
-                    className="text-text-secondary hover:text-experimental-pink transition-colors font-medium"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => handleAuthClick('signup')}
-                    className="bg-experimental-electric hover:bg-experimental-electric-hover text-text-primary font-semibold px-6 py-2 rounded-lg transition-colors"
-                  >
-                    Get Started
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleAuthClick('signup')}
+                  className="group flex items-center text-lg font-bold text-experimental-electric hover:text-experimental-electric-hover transition-all duration-300 hover-glow uppercase tracking-tight"
+                >
+                  <ArrowRight className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
+                  FOCUS
+                </button>
               )}
             </div>
 
@@ -230,18 +223,13 @@ const Navbar: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="pt-4 border-t border-surface-border/30 space-y-3">
-                    <button
-                      onClick={() => handleAuthClick('signin')}
-                      className="w-full text-text-secondary hover:text-experimental-pink transition-colors font-medium py-2 text-left"
-                    >
-                      Sign In
-                    </button>
+                  <div className="pt-4 border-t border-surface-border/30">
                     <button
                       onClick={() => handleAuthClick('signup')}
-                      className="w-full bg-experimental-electric hover:bg-experimental-electric-hover text-text-primary font-semibold px-4 py-3 rounded-lg transition-colors"
+                      className="group flex items-center w-full text-lg font-bold text-experimental-electric hover:text-experimental-electric-hover transition-all duration-300 hover-glow uppercase tracking-tight py-3"
                     >
-                      Get Started
+                      <ArrowRight className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
+                      FOCUS
                     </button>
                   </div>
                 )}

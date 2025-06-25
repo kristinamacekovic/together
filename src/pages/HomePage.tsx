@@ -6,7 +6,7 @@ export function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
-    <div className="experimental-gradient-bg">
+    <div className="bg-background-primary">
       {/* Full viewport hero section */}
       <section className="min-h-screen flex flex-col justify-center px-6 lg:px-12 py-8">
         <div className="max-w-7xl mx-auto w-full">
@@ -15,26 +15,21 @@ export function HomePage() {
             <h1 className="text-3xl lg:text-4xl font-bold text-text-primary">together</h1>
           </div>
           
-          {/* Main headline - controlled line breaks */}
+          {/* Main headline - single line */}
           <div className="mb-8 lg:mb-12">
-            <h2 className="font-black text-experimental-pink uppercase tracking-tight leading-[0.85]">
-              <div className="text-6xl md:text-7xl lg:text-8xl xl:text-9xl mb-2 lg:mb-4">
-                AI ACCOUNTABILITY
-              </div>
-              <div className="text-6xl md:text-7xl lg:text-8xl xl:text-9xl">
-                PARTNER
-              </div>
+            <h2 className="font-black text-experimental-pink uppercase tracking-tight leading-[0.85] text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
+              AI ACCOUNTABILITY PARTNER
             </h2>
           </div>
           
           {/* Description text - better sizing and spacing */}
           <div className="mb-8 lg:mb-12">
-            <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl font-normal text-text-primary leading-relaxed max-w-4xl">
+            <p className="text-lg md:text-xl lg:text-2xl xl:text-3xl font-normal text-text-primary leading-relaxed max-w-4xl">
               Stay focused with AI-powered accountability coaching. Perfect for ADHD, remote work, and studying.
             </p>
           </div>
           
-          {/* CTA - proportional sizing */}
+          {/* CTA - hero style with arrow */}
           <div className="mb-8">
             <button 
               onClick={() => setShowAuthModal(true)}

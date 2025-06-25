@@ -172,10 +172,10 @@ const OnboardingPage: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center space-x-3 mb-6">
-            <div className="w-12 h-12 gruvbox-accent-gradient rounded-lg flex items-center justify-center">
-              <Brain className="h-7 w-7 text-gruvbox-dark" />
+            <div className="w-12 h-12 bg-experimental-pink rounded-lg flex items-center justify-center">
+              <Brain className="h-7 w-7 text-background-primary" />
             </div>
-            <h1 className="text-3xl font-bold gradient-text">Welcome to Together!</h1>
+            <h1 className="text-3xl font-bold text-experimental-pink">Welcome to Together!</h1>
           </div>
           <p className="text-xl text-gruvbox-fg2 mb-8">
             Let's personalize your AI study buddy to match your learning style and goals
@@ -187,9 +187,9 @@ const OnboardingPage: React.FC = () => {
               <span>Step {currentStep} of {totalSteps}</span>
               <span>{Math.round((currentStep / totalSteps) * 100)}%</span>
             </div>
-            <div className="w-full bg-gruvbox-dark-soft rounded-full h-2">
+            <div className="w-full bg-surface-hover rounded-full h-2">
               <div 
-                className="gruvbox-accent-gradient h-2 rounded-full transition-all duration-300"
+                className="bg-experimental-pink h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               ></div>
             </div>
