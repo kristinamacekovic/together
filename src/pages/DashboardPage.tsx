@@ -450,14 +450,12 @@ const DashboardPage: React.FC = () => {
                   <div className="text-lg font-medium text-text-primary">
                     Your session is ready
                   </div>
-                  <a
-                    href={sessionUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => navigate(`/conversation/${encodeURIComponent(sessionUrl)}`)}
                     className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink font-bold transition-all duration-300 hover:scale-105 hover:tracking-wide"
                   >
                     JOIN SESSION →
-                  </a>
+                  </button>
                   <div>
                     <button
                       onClick={() => setSessionUrl(null)}
