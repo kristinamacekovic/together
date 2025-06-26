@@ -85,7 +85,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       <nav className="bg-background-primary/80 backdrop-blur-md border-b border-surface-border/20 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center h-20">
             {/* Logo - only show when scrolled, aligned with hero */}
             <div className="w-full flex items-center">

@@ -106,13 +106,9 @@ serve(async (req) => {
       .from('sessions')
       .insert({
         user_id: user.id,
-        conversation_name: tavusData.conversation_name,
-        requested_session_length: preferred_session_length,
-        conversation_id: tavusData.conversation_id,
-        conversation_url: tavusData.conversation_url,
-        replica_id: TAVUS_REPLICA_ID,
-        persona_id: TAVUS_PERSONA_ID,
-        status: 'created',
+        title: tavusData.conversation_name,
+        planned_duration: preferred_session_length,
+        status: 'planned',
       })
 
     if (dbError) {
