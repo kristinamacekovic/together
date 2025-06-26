@@ -1,57 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Maximize, Minimize } from 'lucide-react';
+import { ArrowLeft, Maximize, Minimize, AlertTriangle } from 'lucide-react';
+import { supabase, Session } from '../lib/supabase'; // Import supabase client and Session type
 
 const ConversationPage: React.FC = () => {
-  const { conversationUrl } = useParams<{ conversationUrl: string }>();
+  const { conversationUrl: sessionId } = useParams<{ conversationUrl: string }>(); // Use correct param name and alias to sessionId
   const navigate = useNavigate();
-  const decodedUrl = conversationUrl ? decodeURIComponent(conversationUrl) : '';
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [sessionStartTime] = useState(new Date());
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [sessionStatus, setSessionStatus] = useState<'connecting' | 'active' | 'ended'>('connecting');
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      if (!sessionId) {
+        setError('No session ID provided.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (data) {
+          setSession(data);
+          setSessionStartTime(new Date(data.created_at));
+        } else {
+          throw new Error('Session not found.');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch session details.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
+  }, [sessionId]);
 
   // Update current time every second for duration calculation
   useEffect(() => {
+    if (!sessionStartTime) return;
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-
     return () => clearInterval(timer);
-  }, []);
+  }, [sessionStartTime]);
 
-  // Simulate session status detection (in real app, this would monitor the iframe/Tavus state)
-  useEffect(() => {
-    // Set to active after a short delay to simulate connection
-    const connectTimer = setTimeout(() => {
-      setSessionStatus('active');
-    }, 2000);
-
-    // Monitor for session end (this is a placeholder - you'd integrate with Tavus events)
-    const checkSessionTimer = setInterval(() => {
-      // In a real implementation, you'd check if the iframe shows "You've left the call"
-      // or listen to Tavus webhook events
-      try {
-        // This is a simplified check - you might need to implement postMessage communication
-        // with the iframe or use Tavus webhooks for accurate session state
-        const iframe = document.querySelector('iframe[title="Tavus Conversation"]') as HTMLIFrameElement;
-        if (iframe && iframe.contentWindow) {
-          // Real implementation would check iframe content or use Tavus API
-          // For now, we'll keep it active unless manually ended
-        }
-      } catch (error) {
-        // Cross-origin restrictions prevent direct iframe content access
-        // In production, use Tavus webhooks or postMessage API
-      }
-    }, 5000);
-
-    return () => {
-      clearTimeout(connectTimer);
-      clearInterval(checkSessionTimer);
-    };
-  }, []);
-
-  const formatDuration = (startTime: Date, currentTime: Date): string => {
+  const formatDuration = (startTime: Date | null, currentTime: Date): string => {
+    if (!startTime) return '00:00:00';
     const diffMs = currentTime.getTime() - startTime.getTime();
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -61,40 +68,72 @@ const ConversationPage: React.FC = () => {
   };
 
   const getStatusDisplay = () => {
-    switch (sessionStatus) {
-      case 'connecting':
-        return { text: 'Connecting...', color: 'bg-warning-500', pulse: true };
-      case 'active':
-        return { text: 'Active', color: 'bg-success-500', pulse: false };
-      case 'ended':
-        return { text: 'Ended', color: 'bg-error-500', pulse: false };
+    const status = session?.status || 'planned';
+    switch (status) {
+      case 'planned':
+        return { text: 'Connecting...', color: 'bg-yellow-500', pulse: true };
+      case 'in_progress':
+        return { text: 'Active', color: 'bg-green-500', pulse: false };
+      case 'completed':
+      case 'cancelled':
+        return { text: 'Ended', color: 'bg-red-500', pulse: false };
       default:
-        return { text: 'Unknown', color: 'bg-surface-border', pulse: false };
+        return { text: 'Unknown', color: 'bg-gray-500', pulse: false };
     }
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
+  const handleBackToDashboard = () => navigate('/dashboard');
 
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-experimental-pink"></div>
+      </div>
+    );
+  }
 
-  const handleEndSession = () => {
-    setSessionStatus('ended');
-    // In a real app, you'd call Tavus API to end the session
-    // For now, we'll just update the local state and optionally navigate back
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000); // Give user time to see the "ended" status
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center p-4 text-center">
+        <div>
+          <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h2 className="text-xl font-bold text-text-primary mb-2">Error Loading Session</h2>
+          <p className="text-text-secondary mb-6">{error}</p>
+          <button
+            onClick={handleBackToDashboard}
+            className="bg-experimental-electric hover:bg-experimental-electric-hover text-text-primary font-bold py-2 px-4 rounded-lg"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
+  const renderIframe = () => (
+    session?.conversation_url ? (
+      <iframe
+        src={session.conversation_url}
+        allow="camera; microphone; fullscreen; display-capture"
+        className="w-full h-full border-none"
+        title="Tavus Conversation"
+      />
+    ) : (
+      <div className="flex items-center justify-center h-full text-white text-center">
+        <div>
+          <h2 className="text-xl font-bold mb-2">Conversation Not Available</h2>
+          <p>The conversation link for this session is missing.</p>
+        </div>
+      </div>
+    )
+  );
+  
   if (isFullscreen) {
     return (
       <div className="fixed inset-0 bg-black z-50">
         <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
-          <h2 className="text-white font-bold">Focus Session - Fullscreen</h2>
+          <h2 className="text-white font-bold">Focus Session</h2>
           <button
             onClick={toggleFullscreen}
             className="bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg transition-colors flex items-center space-x-2"
@@ -103,21 +142,7 @@ const ConversationPage: React.FC = () => {
             <span className="text-sm">Exit Fullscreen</span>
           </button>
         </div>
-        {decodedUrl ? (
-          <iframe
-            src={decodedUrl}
-            allow="camera; microphone; fullscreen; display-capture"
-            className="w-full h-full border-none"
-            title="Tavus Conversation"
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-white text-center">
-            <div>
-              <h2 className="text-xl font-bold mb-2">Invalid Conversation</h2>
-              <p>Invalid or missing conversation URL.</p>
-            </div>
-          </div>
-        )}
+        {renderIframe()}
       </div>
     );
   }
@@ -137,7 +162,7 @@ const ConversationPage: React.FC = () => {
                 <span className="font-medium">Back to Dashboard</span>
               </button>
               <div className="w-px h-6 bg-surface-border/50"></div>
-              <h1 className="text-2xl font-bold text-text-primary">Focus Session</h1>
+              <h1 className="text-2xl font-bold text-text-primary">{session?.title || 'Focus Session'}</h1>
             </div>
             <button
               onClick={toggleFullscreen}
@@ -155,32 +180,17 @@ const ConversationPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Video Call */}
           <div className="lg:col-span-2">
-            <div className="bg-surface-elevated rounded-2xl overflow-hidden shadow-elegant-lg">
-              {decodedUrl ? (
-                <iframe
-                  src={decodedUrl}
-                  allow="camera; microphone; fullscreen; display-capture"
-                  className="w-full h-[500px] lg:h-[600px] border-none"
-                  title="Tavus Conversation"
-                />
-              ) : (
-                <div className="h-[500px] lg:h-[600px] flex items-center justify-center text-center">
-                  <div>
-                    <h2 className="text-xl font-bold text-text-primary mb-2">Invalid Conversation</h2>
-                    <p className="text-text-secondary">Invalid or missing conversation URL.</p>
-                  </div>
-                </div>
-              )}
+            <div className="bg-surface-elevated rounded-2xl overflow-hidden shadow-elegant-lg h-[500px] lg:h-[600px]">
+              {renderIframe()}
             </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Session Info */}
             <div className="bg-surface-elevated rounded-2xl p-6 shadow-elegant">
               <h3 className="text-lg font-bold text-text-primary mb-4">Session Details</h3>
               <div className="space-y-3">
-                                 <div>
+                 <div>
                    <span className="text-text-secondary text-sm">Status</span>
                    <div className="flex items-center space-x-2 mt-1">
                      <div className={`w-2 h-2 ${getStatusDisplay().color} rounded-full ${getStatusDisplay().pulse ? 'animate-pulse' : ''}`}></div>
@@ -200,43 +210,15 @@ const ConversationPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-surface-elevated rounded-2xl p-6 shadow-elegant">
               <h3 className="text-lg font-bold text-text-primary mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={toggleFullscreen}
-                  className="w-full flex items-center justify-center space-x-2 bg-experimental-electric hover:bg-experimental-electric-hover text-background-primary font-bold py-3 px-4 rounded-lg transition-colors"
-                >
-                  <Maximize className="w-4 h-4" />
-                  <span>Fullscreen Mode</span>
-                </button>
-                                 <button
-                   onClick={handleEndSession}
-                   className="w-full bg-surface-hover hover:bg-surface-active text-text-primary font-medium py-3 px-4 rounded-lg transition-colors"
-                 >
-                   End Session
-                 </button>
-              </div>
-            </div>
-
-            {/* Tips */}
-            <div className="bg-surface-elevated rounded-2xl p-6 shadow-elegant">
-              <h3 className="text-lg font-bold text-text-primary mb-4">Session Tips</h3>
-              <div className="space-y-3 text-sm text-text-secondary">
-                <div className="flex items-start space-x-2">
-                  <div className="w-1.5 h-1.5 bg-experimental-pink rounded-full mt-2 flex-shrink-0"></div>
-                  <span>Share your goals clearly with your AI partner</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <div className="w-1.5 h-1.5 bg-experimental-pink rounded-full mt-2 flex-shrink-0"></div>
-                  <span>Ask for accountability check-ins</span>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <div className="w-1.5 h-1.5 bg-experimental-pink rounded-full mt-2 flex-shrink-0"></div>
-                  <span>Use the fullscreen mode for focused sessions</span>
-                </div>
-              </div>
+              <button
+                onClick={toggleFullscreen}
+                className="w-full flex items-center justify-center space-x-2 bg-experimental-electric hover:bg-experimental-electric-hover text-background-primary font-bold py-3 px-4 rounded-lg transition-colors"
+              >
+                <Maximize className="w-4 h-4" />
+                <span>Fullscreen Mode</span>
+              </button>
             </div>
           </div>
         </div>

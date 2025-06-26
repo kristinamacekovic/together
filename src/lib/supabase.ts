@@ -53,6 +53,7 @@ export interface InitialForm {
 export interface Session {
   id: string;
   user_id: string;
+  title?: string;
   conversation_id: string;
   conversation_url?: string;
   conversation_name?: string;

@@ -192,7 +192,6 @@ const DashboardPage: React.FC = () => {
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const mountedRef = useRef(true);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const [sessionUrl, setSessionUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'context' | 'analytics'>('context');
   const navigate = useNavigate();
 
@@ -271,7 +270,6 @@ const DashboardPage: React.FC = () => {
 
     setIsCreatingSession(true);
     setError('');
-    setSessionUrl(null);
 
     try {
       const { data, error } = await supabase.functions.invoke('create-conversation', {
@@ -282,10 +280,10 @@ const DashboardPage: React.FC = () => {
         throw error;
       }
 
-      if (data.conversation_url) {
-        setSessionUrl(data.conversation_url);
+      if (data.session_id) {
+        navigate(`/conversation/${data.session_id}`);
       } else {
-        throw new Error('Failed to get conversation URL.');
+        throw new Error('Failed to get session ID from creation function.');
       }
     } catch (error: any) {
       setError(`Failed to create session: ${error.message}`);
@@ -301,13 +299,7 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleSessionClick = (session: Session) => {
-    // If the session has a conversation URL, navigate directly to it
-    if (session.conversation_url) {
-      navigate(`/conversation/${encodeURIComponent(session.conversation_url)}`);
-    } else {
-      // Otherwise, create a new conversation
-      createConversation();
-    }
+    navigate(`/conversation/${session.id}`);
   };
 
   const startEditing = (field: keyof InitialForm) => {
@@ -401,8 +393,6 @@ const DashboardPage: React.FC = () => {
     return initialForm?.[field] ?? defaultFormData[field];
   };
 
-
-
   // Show error state with retry option
   if (error) {
     return (
@@ -449,52 +439,30 @@ const DashboardPage: React.FC = () => {
             
             {/* Session Launcher - positioned to the right */}
             <div className="flex-shrink-0">
-              {sessionUrl ? (
-                <div className="text-center lg:text-right space-y-4">
-                  <div className="text-lg font-medium text-text-primary">
-                    Your session is ready
-                  </div>
-                  <button
-                    onClick={() => navigate(`/conversation/${encodeURIComponent(sessionUrl)}`)}
-                    className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink font-bold transition-all duration-300 hover:scale-105 hover:tracking-wide"
-                  >
-                    JOIN SESSION →
-                  </button>
-                  <div>
-                    <button
-                      onClick={() => setSessionUrl(null)}
-                      className="text-text-muted hover:text-text-secondary transition-colors text-sm"
-                    >
-                      Create another session
-                    </button>
-                  </div>
+              <div className="text-center lg:text-right space-y-4">
+                <div className="text-lg font-medium text-text-primary">
+                  Ready to start?
                 </div>
-              ) : (
-                <div className="text-center lg:text-right space-y-4">
-                  <div className="text-lg font-medium text-text-primary">
-                    Ready to start?
-                  </div>
-                  <button
-                    onClick={createConversation}
-                    disabled={isCreatingSession || !hasOnboardingData}
-                    className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink disabled:text-text-muted font-bold transition-all duration-300 disabled:cursor-not-allowed hover:scale-105 hover:tracking-wide"
-                  >
-                    {isCreatingSession ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-3"></div>
-                        CREATING...
-                      </div>
-                    ) : (
-                      'START SESSION →'
-                    )}
-                  </button>
-                  {!hasOnboardingData && (
-                    <div className="text-text-muted text-xs max-w-xs">
-                      Complete your profile below to enable sessions
+                <button
+                  onClick={createConversation}
+                  disabled={isCreatingSession || !hasOnboardingData}
+                  className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink disabled:text-text-muted font-bold transition-all duration-300 disabled:cursor-not-allowed hover:scale-105 hover:tracking-wide"
+                >
+                  {isCreatingSession ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-3"></div>
+                      CREATING...
                     </div>
+                  ) : (
+                    'START SESSION →'
                   )}
-                </div>
-              )}
+                </button>
+                {!hasOnboardingData && (
+                  <div className="text-text-muted text-xs max-w-xs">
+                    Complete your profile below to enable sessions
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
@@ -993,7 +961,7 @@ const DashboardPage: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-3">
                         <div className="text-text-muted group-hover:text-experimental-pink transition-colors">
-                          {session.conversation_url ? 'CONTINUE →' : 'START NEW →'}
+                          VIEW SESSION →
                         </div>
                       </div>
                     </button>

@@ -102,22 +102,25 @@ serve(async (req) => {
 
     const tavusData = await tavusResponse.json()
 
-    const { error: dbError } = await supabaseClient
+    const { data: sessionData, error: dbError } = await supabaseClient
       .from('sessions')
       .insert({
         user_id: user.id,
         title: tavusData.conversation_name,
         planned_duration: preferred_session_length,
         status: 'planned',
+        conversation_url: tavusData.conversation_url,
       })
+      .select('id')
+      .single()
 
     if (dbError) {
       console.error('Database insert error:', dbError);
-      // We don't want to fail the whole request if DB insert fails,
-      // so we just log it and return the Tavus data.
+      // Throw an error to ensure the frontend knows the operation failed
+      throw new Error(`Database insert failed: ${dbError.message}`);
     }
 
-    return new Response(JSON.stringify(tavusData), {
+    return new Response(JSON.stringify({ ...tavusData, session_id: sessionData?.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
