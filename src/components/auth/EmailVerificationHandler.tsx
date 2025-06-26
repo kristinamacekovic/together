@@ -14,20 +14,19 @@ const EmailVerificationHandler: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [toast, setToast] = useState<Toast>({ type: 'success', message: '', show: false });
   const navigate = useNavigate();
-  const { user, hasCompletedOnboarding } = useAuth();
+  const { hasCompletedOnboarding } = useAuth();
 
   useEffect(() => {
     const handleEmailVerification = async () => {
       // Check if this is an email verification callback
       const type = searchParams.get('type');
       const tokenHash = searchParams.get('token_hash');
-      const next = searchParams.get('next');
       
       if (type === 'email_change' || type === 'signup' || type === 'recovery') {
         if (tokenHash) {
           try {
             // Exchange the token for a session
-            const { data, error } = await supabase.auth.verifyOtp({
+            const { error } = await supabase.auth.verifyOtp({
               token_hash: tokenHash,
               type: type as any
             });
