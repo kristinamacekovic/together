@@ -2,6 +2,7 @@ import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import AuthModal from './auth/AuthModal';
+import UsageTracker from './UsageTracker';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LayoutProps {
@@ -19,6 +20,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
       <Footer />
       <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+      {/* Global Usage Tracking Modal */}
+      <UsageTracker />
     </div>
   );
 };

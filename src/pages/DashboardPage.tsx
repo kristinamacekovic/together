@@ -7,6 +7,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import UsageTracker from '../components/UsageTracker';
 
 interface EditableField {
   field: keyof InitialForm;
@@ -195,6 +196,7 @@ const DashboardPage: React.FC = () => {
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [activeTab, setActiveTab] = useState<'context' | 'analytics'>('context');
+  const [isUsageOverLimit, setIsUsageOverLimit] = useState(false);
   const navigate = useNavigate();
 
   // Show loading state while auth is resolving
@@ -455,7 +457,7 @@ const DashboardPage: React.FC = () => {
                 </div>
                 <button
                   onClick={createConversation}
-                  disabled={isCreatingSession || !hasOnboardingData}
+                  disabled={isCreatingSession || !hasOnboardingData || isUsageOverLimit}
                   className="text-xl lg:text-2xl text-experimental-electric hover:text-experimental-pink disabled:text-text-muted font-bold transition-all duration-300 disabled:cursor-not-allowed hover:scale-105 hover:tracking-wide"
                 >
                   {isCreatingSession ? (
@@ -470,6 +472,11 @@ const DashboardPage: React.FC = () => {
                 {!hasOnboardingData && (
                   <div className="text-text-muted text-xs max-w-xs">
                     Complete your profile below to enable sessions
+                  </div>
+                )}
+                {isUsageOverLimit && (
+                  <div className="text-red-500 text-xs max-w-xs">
+                    Usage limit exceeded. Please contact support to continue.
                   </div>
                 )}
               </div>
@@ -906,6 +913,11 @@ const DashboardPage: React.FC = () => {
 
         {activeTab === 'analytics' && (
           <div className="space-y-16">
+            {/* Usage Tracker - Prominent Position */}
+            <div className="mb-8">
+              <UsageTracker showInDashboard={true} onUsageStatusChange={setIsUsageOverLimit} />
+            </div>
+            
             {/* Stats in minimal style */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="text-center">
