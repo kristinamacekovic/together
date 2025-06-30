@@ -227,6 +227,22 @@ export function HomePage() {
           </button>
         </div>
       </Section>
+
+      {/* Bottom Badge */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <a 
+          href="https://bolt.new" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="block hover:scale-105 transition-transform duration-200"
+        >
+          <img 
+            src="/white_circle_360x360.png" 
+            alt="Powered by Bolt" 
+            className="w-16 h-16 opacity-80 hover:opacity-100 transition-opacity duration-200"
+          />
+        </a>
+      </div>
     </div>
   );
 }
