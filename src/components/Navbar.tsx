@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowRight } from 'lucide-react';
 
@@ -9,7 +9,6 @@ interface NavbarProps {
 
 export default function Navbar({ onGetStartedClick }: NavbarProps) {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogo, setShowLogo] = useState(false);
 

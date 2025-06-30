@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle, Zap, BrainCircuit, Users, ShieldCheck, Star } from 'lucide-react';
+import { ArrowRight, CheckCircle, Zap, BrainCircuit, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Section = ({ children, className = '', id }: { children: React.ReactNode; className?: string, id?: string }) => (
