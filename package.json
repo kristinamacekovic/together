@@ -17,6 +17,7 @@
     "react-router-dom": "^6.8.1"
   },
   "devDependencies": {
+    "@deno/types": "^0.0.1",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",

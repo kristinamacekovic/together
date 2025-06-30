@@ -60,10 +60,10 @@ export interface Session {
   replica_id?: string;
   persona_id?: string;
   status?: string;
-  requested_session_length?: number;
+  planned_duration?: number; // Changed from requested_session_length to match database schema
   actual_duration?: number; // Duration in minutes from Tavus webhook
   started_at?: string;
-  ended_at?: string;
+  completed_at?: string; // Changed from ended_at to match database schema
   created_at: string;
 }
 

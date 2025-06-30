@@ -81,7 +81,7 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ sessions }) => {
       data.push({
         date: dateStr,
         count: daysSessions.length,
-        totalMinutes: daysSessions.reduce((acc, s) => acc + (s.actual_duration || s.requested_session_length || 25), 0),
+        totalMinutes: daysSessions.reduce((acc, s) => acc + (s.actual_duration || s.planned_duration || 25), 0),
         label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       });
     }
@@ -263,7 +263,7 @@ const DashboardPage: React.FC = () => {
 
     const sessionsToday = sessions.filter(s => new Date(s.created_at) >= today).length;
     const sessionsThisWeek = sessions.filter(s => new Date(s.created_at) >= startOfWeek).length;
-    const totalHours = sessions.reduce((acc, s) => acc + (s.actual_duration || s.requested_session_length || 25), 0) / 60;
+    const totalHours = sessions.reduce((acc, s) => acc + (s.actual_duration || s.planned_duration || 25), 0) / 60;
 
     return {
       sessionsToday,
@@ -965,7 +965,7 @@ const DashboardPage: React.FC = () => {
                         <div className="text-text-secondary text-sm">
                           {session.actual_duration 
                             ? `${formatSessionLength(session.actual_duration)} (actual)` 
-                            : `${formatSessionLength(session.requested_session_length || 25)} (planned)`
+                            : `${formatSessionLength(session.planned_duration || 25)} (planned)`
                           } • {session.status || 'created'}
                         </div>
                       </div>

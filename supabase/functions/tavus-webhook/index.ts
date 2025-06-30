@@ -1,4 +1,7 @@
+/// <reference path="../types.d.ts" />
+// @ts-ignore - Deno HTTP URL imports work at runtime
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+// @ts-ignore - ESM.sh imports work at runtime in Deno
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -29,7 +32,7 @@ serve(async (req) => {
       const { error: startError } = await supabaseClient
         .from('sessions')
         .update({ 
-          status: 'active',
+          status: 'in_progress',
           started_at: new Date().toISOString()
         })
         .eq('conversation_id', event.conversation_id)
@@ -70,7 +73,7 @@ serve(async (req) => {
         .from('sessions')
         .update({ 
           status: 'completed',
-          ended_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
           actual_duration: actualDuration
         })
         .eq('conversation_id', event.conversation_id)

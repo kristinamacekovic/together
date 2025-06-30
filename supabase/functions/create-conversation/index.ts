@@ -1,4 +1,7 @@
+/// <reference path="../types.d.ts" />
+// @ts-ignore - Deno HTTP URL imports work at runtime
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+// @ts-ignore - ESM.sh imports work at runtime in Deno
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -50,8 +53,8 @@ serve(async (req) => {
       Be an encouraging and helpful study partner.
     `;
 
-    // Dynamically get project ref from VITE_SUPABASE_URL
-    const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL');
+    // Dynamically get project ref from SUPABASE_URL instead of VITE_SUPABASE_URL
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
     let projectRef = '';
     if (supabaseUrl) {
       // Example: https://<project-ref>.supabase.co
@@ -66,6 +69,12 @@ serve(async (req) => {
     console.log('TAVUS_REPLICA_ID:', TAVUS_REPLICA_ID);
     console.log('TAVUS_PERSONA_ID:', TAVUS_PERSONA_ID);
     console.log('TAVUS_API_KEY:', TAVUS_API_KEY ? 'set' : 'not set');
+    console.log('USER DEBUG:', {
+      id: user.id,
+      email: user.email,
+      user_metadata: user.user_metadata,
+      full_name: user.user_metadata?.full_name
+    });
     const properties = {
       max_call_duration: preferred_session_length ? preferred_session_length * 60 : undefined, // in seconds
       participant_left_timeout: 60, // in seconds
@@ -74,7 +83,7 @@ serve(async (req) => {
       replica_id: TAVUS_REPLICA_ID,
       persona_id: TAVUS_PERSONA_ID,
       conversational_context,
-      conversation_name: `Study Session with ${user.email || user.id} on ${new Date().toLocaleString()}`,
+      conversation_name: `Study Session with ${user.user_metadata?.full_name || user.email || user.id} on ${new Date().toLocaleString()}`,
       callback_url,
       properties,
     });
@@ -89,7 +98,7 @@ serve(async (req) => {
         replica_id: TAVUS_REPLICA_ID,
         persona_id: TAVUS_PERSONA_ID,
         conversational_context,
-        conversation_name: `Study Session with ${user.email || user.id} on ${new Date().toLocaleString()}`,
+        conversation_name: `Study Session with ${user.user_metadata?.full_name || user.email || user.id} on ${new Date().toLocaleString()}`,
         callback_url,
         properties,
       }),
@@ -109,6 +118,7 @@ serve(async (req) => {
         title: tavusData.conversation_name,
         planned_duration: preferred_session_length,
         status: 'planned',
+        conversation_id: tavusData.conversation_id,
         conversation_url: tavusData.conversation_url,
       })
       .select('id')

@@ -1,3 +1,5 @@
+/// <reference path="../types.d.ts" />
+// @ts-ignore - Deno HTTP URL imports work at runtime
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 
 const TAVUS_API_KEY = Deno.env.get('TAVUS_API_KEY')
