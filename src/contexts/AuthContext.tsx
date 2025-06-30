@@ -29,146 +29,117 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const openAuthModal = () => setIsAuthModalOpen(true);
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error, status } = await supabase
-        .from('profiles')
-        .select(`*`)
-        .eq('id', userId)
-        .single();
+  // Simple profile creation from user data
+  const createProfile = (user: User): Profile => ({
+    id: user.id,
+    email: user.email || '',
+    full_name: user.user_metadata?.full_name || null,
+    avatar_url: user.user_metadata?.avatar_url || null,
+    created_at: user.created_at,
+    updated_at: new Date().toISOString(),
+  });
 
-      if (error && status !== 406) {
-        throw error;
-      }
-
-      if (data) {
-        setProfile(data);
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  }, []);
-
+  // Initialize auth state
   useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        setLoading(true);
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
+    let mounted = true;
 
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setProfile(session?.user ? createProfile(session.user) : null);
+          setLoading(false);
         }
       } catch (error) {
-        console.error("Error fetching initial session:", error);
-      } finally {
-        setLoading(false);
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
       }
     };
 
-    fetchSession();
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setProfile(session?.user ? createProfile(session.user) : null);
+          setLoading(false);
+        }
+      }
+    );
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.email);
-      
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      // Fetch profile when user signs in or when email is confirmed
-      if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        await fetchProfile(currentUser.id);
-      }
-      
-      // Clear profile when user signs out
-      if (event === 'SIGNED_OUT') {
-        setProfile(null);
-      }
-    });
+    initAuth();
 
     return () => {
-      subscription?.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, []);
 
   const signUp = useCallback(async (email: string, password: string, fullName: string) => {
-    try {
-      console.log('📝 Starting sign up...');
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-      
-      console.log('📝 Sign up result:', error ? 'Error' : 'Success');
-      return { error };
-    } catch (error) {
-      console.error('❌ Sign up error:', error);
-      return { error };
-    }
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName }
+      }
+    });
+    return { error };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password
     });
     return { error };
   }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setProfile(null); // Clear profile on sign out
+    // Auth state change listener will handle clearing state
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!user) return { error: 'No user logged in' };
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, ...updates });
 
-      if (!error) {
-        setProfile(prev => prev ? { ...prev, ...updates } : null);
-      }
-
-      return { error };
-    } catch (error) {
-      return { error };
+    if (!error && profile) {
+      setProfile({ ...profile, ...updates });
     }
-  }, [user]);
+
+    return { error };
+  }, [user, profile]);
 
   const hasCompletedOnboarding = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
 
-    try {
-      const { data, error } = await supabase
-        .from('initial_forms')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
+    const { data, error } = await supabase
+      .from('initial_forms')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
 
-      return !error && !!data;
-    } catch (error) {
-      return false;
-    }
+    return !error && !!data;
   }, [user]);
 
   const value = useMemo(() => ({

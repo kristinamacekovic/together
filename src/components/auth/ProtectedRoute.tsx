@@ -7,7 +7,12 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    // You can return a loading indicator here if you prefer
+    return null;
+  }
 
   // If auth is done and there's no user, redirect to home
   if (!user) {

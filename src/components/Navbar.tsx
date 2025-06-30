@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, LogOut, User } from 'lucide-react';
 
 interface NavbarProps {
   onGetStartedClick: () => void;
 }
 
 export default function Navbar({ onGetStartedClick }: NavbarProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile, loading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogo, setShowLogo] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,6 +20,24 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setShowUserMenu(false);
+    if (showUserMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setShowUserMenu(false);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return (
     <nav className="bg-background-primary/80 backdrop-blur-md border-b border-surface-border/20 sticky top-0 z-50">
@@ -53,10 +72,42 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
               FAQ
             </a>
 
-            {user ? (
-              <Link to="/dashboard" className="flex items-center bg-experimental-faded-blue text-white font-bold py-2 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors">
-                Go to Dashboard
-              </Link>
+            {loading ? (
+              <div className="w-8 h-8 border-2 border-experimental-electric border-t-transparent rounded-full animate-spin"></div>
+            ) : user ? (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowUserMenu(!showUserMenu);
+                  }}
+                  className="flex items-center space-x-2 bg-experimental-faded-blue text-white font-medium py-2 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  <span>{profile?.full_name || user.email || 'User'}</span>
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-surface-elevated border border-surface-border/30 rounded-lg shadow-elegant-xl z-50">
+                    <div className="py-2">
+                      <Link
+                        to="/dashboard"
+                        className="block px-4 py-2 text-text-primary hover:bg-surface-hover transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left px-4 py-2 text-text-secondary hover:bg-surface-hover hover:text-experimental-pink transition-colors flex items-center"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <button
                 onClick={onGetStartedClick}
@@ -109,12 +160,20 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
               FAQ
             </a>
             
-            {user ? (
+            {loading ? (
+              <div className="pt-4 border-t border-surface-border/30 flex justify-center">
+                <div className="w-6 h-6 border-2 border-experimental-electric border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : user ? (
               <div className="pt-4 border-t border-surface-border/30">
+                <div className="text-text-primary font-medium mb-2 px-2">
+                  {profile?.full_name || user.email || 'User'}
+                </div>
                 <Link to="/dashboard" className="w-full flex justify-center items-center bg-experimental-faded-blue text-white font-bold py-3 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors">
                   Go to Dashboard
                 </Link>
-                <button onClick={signOut} className="w-full mt-2 text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
+                <button onClick={handleSignOut} className="w-full mt-2 text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2 flex items-center justify-center">
+                  <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
                 </button>
               </div>

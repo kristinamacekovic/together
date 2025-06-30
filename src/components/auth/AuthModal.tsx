@@ -22,42 +22,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
 
   const { signIn, signUp, user, hasCompletedOnboarding } = useAuth();
 
-  // Watch for successful authentication on sign-in
-  useEffect(() => {
-    // Only handle successful sign-ins here. Sign-ups are handled separately.
-    if (user && isOpen && mode === 'signin') {
-      handleSuccessfulSignIn();
-    }
-  }, [user, isOpen, mode]);
-
-  // Reset loading state when the modal is closed
+  // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
+      setEmail('');
+      setPassword('');
+      setFullName('');
+      setShowPassword(false);
       setLoading(false);
       setError('');
       setSignupSuccess(false);
+      setMode(initialMode);
     }
-  }, [isOpen]);
+  }, [isOpen, initialMode]);
 
-  const handleSuccessfulSignIn = async () => {
-    console.log('Handling successful sign-in...');
-    try {
-      const completed = await hasCompletedOnboarding();
-      console.log('Onboarding completed status:', completed);
-      if (completed) {
-        navigate('/dashboard');
-      } else {
-        navigate('/onboarding');
-      }
-    } catch (err) {
-      console.error('Error checking onboarding status:', err);
-      // Fallback to onboarding on any error during the check
-      navigate('/onboarding');
-    } finally {
-      // Close the modal AFTER navigation has been triggered
-      onClose();
+  // Handle successful sign-in navigation
+  useEffect(() => {
+    if (user && isOpen && mode === 'signin' && !loading) {
+      const handleNavigation = async () => {
+        try {
+          const hasOnboarding = await hasCompletedOnboarding();
+          navigate(hasOnboarding ? '/dashboard' : '/onboarding');
+          onClose();
+        } catch (err) {
+          navigate('/onboarding');
+          onClose();
+        }
+      };
+      handleNavigation();
     }
-  };
+  }, [user, isOpen, mode, loading, hasCompletedOnboarding, navigate, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,55 +59,34 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
     setError('');
 
     try {
-      console.log(`Starting ${mode} process...`);
-      
-      let result;
       if (mode === 'signup') {
-        result = await signUp(email, password, fullName);
-      } else {
-        result = await signIn(email, password);
-      }
-
-      console.log(`${mode} result:`, result);
-
-      if (result.error) {
-        console.error(`${mode} error:`, result.error);
-        setError(result.error.message || `Failed to ${mode === 'signin' ? 'sign in' : 'sign up'}`);
-        setLoading(false);
-      } else {
+        if (!fullName.trim()) {
+          throw new Error('Full name is required');
+        }
+        const { error } = await signUp(email, password, fullName);
+        if (error) throw error;
         setSignupSuccess(true);
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) throw error;
+        // Navigation handled by useEffect
       }
-      
     } catch (err: any) {
-      console.error(`Unexpected ${mode} error:`, err);
-      setError(err.message || 'An unexpected error occurred');
+      setError(err.message || 'An error occurred');
+    } finally {
       setLoading(false);
     }
-  };
-
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setFullName('');
-    setError('');
-    setShowPassword(false);
-    setSignupSuccess(false);
-  };
-
-  const switchMode = () => {
-    setMode(mode === 'signin' ? 'signup' : 'signin');
-    resetForm();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-background-primary/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-surface-elevated border border-surface-border/30 rounded-2xl shadow-elegant-xl w-full max-w-md animate-slide-up">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-surface-elevated rounded-2xl shadow-elegant-xl w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-surface-border/30">
           <h2 className="text-2xl font-bold text-text-primary">
-            {signupSuccess ? 'Check Your Email' : mode === 'signin' ? 'Welcome Back' : 'Join Together'}
+            {signupSuccess ? "Check Your Email" : mode === 'signin' ? "Welcome Back" : "Join Together"}
           </h2>
           <button
             onClick={onClose}
@@ -124,48 +97,42 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
         </div>
 
         {signupSuccess ? (
-          <div className="p-6 space-y-6">
-            <div className="bg-background-secondary/30 border border-experimental-pink/20 p-6 rounded-xl text-center space-y-4">
-              <div className="w-16 h-16 bg-experimental-pink/20 border border-experimental-pink/30 rounded-full flex items-center justify-center mx-auto">
-                <Mail className="w-8 h-8 text-experimental-pink" />
+          <div className="p-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-experimental-faded-blue rounded-full flex items-center justify-center mx-auto">
+                <Mail className="w-8 h-8 text-experimental-electric" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-text-primary mb-2">CHECK YOUR EMAIL</h3>
-                <p className="text-text-secondary">We've sent a confirmation link to</p>
-                <p className="text-experimental-pink font-medium">{email}</p>
-                <p className="text-text-secondary mt-3">Please click the link in the email to complete your registration and sign in.</p>
+                <h3 className="text-lg font-semibold text-text-primary mb-2">Verification Required</h3>
+                <p className="text-text-secondary">
+                  We've sent a verification link to <span className="font-medium">{email}</span>. 
+                  Please check your email and click the link to complete your registration.
+                </p>
               </div>
+              <button
+                onClick={onClose}
+                className="w-full bg-experimental-faded-blue text-white font-bold py-3 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors"
+              >
+                Got it
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="w-full text-xl font-bold text-experimental-electric hover:text-experimental-pink transition-all duration-300 py-4 uppercase tracking-wide"
-            >
-              CLOSE
-            </button>
           </div>
         ) : (
           <>
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {error && (
-                <div className="bg-error-50 border border-error-500/30 text-error-700 p-4 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
               {mode === 'signup' && (
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
                     Full Name
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
                     <input
                       type="text"
-                      id="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-background-primary border border-surface-border/50 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-experimental-pink focus:border-transparent transition-all"
+                      className="w-full pl-10 pr-4 py-3 bg-surface-secondary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
                       placeholder="Enter your full name"
                       required
                     />
@@ -174,17 +141,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Email Address
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
                   <input
                     type="email"
-                    id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-background-primary border border-surface-border/50 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-experimental-pink focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-surface-secondary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
                     placeholder="Enter your email"
                     required
                   />
@@ -192,57 +158,63 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Password
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5" />
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-background-primary border border-surface-border/50 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-experimental-pink focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-12 py-3 bg-surface-secondary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
                     placeholder="Enter your password"
                     required
-                    minLength={6}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
-                className="group w-full flex items-center justify-center text-2xl font-bold text-experimental-electric hover:text-experimental-electric-hover transition-all duration-300 hover-glow disabled:opacity-50 disabled:cursor-not-allowed py-4"
+                className="w-full bg-experimental-faded-blue text-white font-bold py-3 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  'Please wait...'
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <ArrowRight className="w-6 h-6 mr-3 group-hover:translate-x-2 transition-transform duration-300" />
-                    {mode === 'signin' ? 'SIGN IN.' : 'CREATE ACCOUNT.'}
+                    {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Footer */}
-            <div className="p-6 border-t border-surface-border/30 text-center">
-              <p className="text-text-tertiary">
-                {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
+            {/* Toggle Mode */}
+            <div className="px-6 pb-6 text-center">
+              <p className="text-text-secondary">
+                {mode === 'signin'
+                  ? "Don't have an account? "
+                  : "Already have an account? "
+                }
                 <button
-                  onClick={switchMode}
-                  className="group ml-2 text-experimental-pink hover:text-experimental-pink-hover font-medium transition-all duration-300 inline-flex items-center"
+                  onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+                  className="text-experimental-electric hover:text-experimental-pink font-medium transition-colors"
                 >
-                  <ArrowRight className="w-4 h-4 mr-1 group-hover:translate-x-1 transition-transform duration-300" />
-                  {mode === 'signin' ? 'SIGN UP' : 'SIGN IN'}
+                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
                 </button>
               </p>
             </div>

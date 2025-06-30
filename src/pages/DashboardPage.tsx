@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, InitialForm, Goal, Session } from '../lib/supabase';
 import { 
@@ -180,8 +180,11 @@ const ActivityChart: React.FC<ActivityChartProps> = ({ sessions }) => {
 };
 
 const DashboardPage: React.FC = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const userId = user?.id;
+  
+  console.log('🔍 Dashboard: Render - loading:', loading, 'userId:', userId || 'none');
+  
   const [initialForm, setInitialForm] = useState<InitialForm | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -190,14 +193,27 @@ const DashboardPage: React.FC = () => {
   const [editValue, setEditValue] = useState<any>('');
   const [saving, setSaving] = useState(false);
   const [hasOnboardingData, setHasOnboardingData] = useState(false);
-  const mountedRef = useRef(true);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [activeTab, setActiveTab] = useState<'context' | 'analytics'>('context');
   const navigate = useNavigate();
 
-  const fetchUserData = useCallback(async () => {
+  // Show loading state while auth is resolving
+  if (loading) {
+    console.log('🔍 Dashboard: Showing auth loading screen');
+    return (
+      <div className="min-h-screen bg-background-primary flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-experimental-electric border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-text-secondary">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const fetchUserData = async () => {
     if (!userId) return;
 
+    console.log('🔍 Dashboard: Starting data fetch for userId:', userId);
     try {
       // Fetch in parallel
       const [
@@ -209,8 +225,6 @@ const DashboardPage: React.FC = () => {
         supabase.from('goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('sessions').select('*').eq('user_id', userId).order('created_at', { ascending: false })
       ]);
-
-      if (!mountedRef.current) return;
 
       if (formError && formError.code !== 'PGRST116') {
         throw new Error(`Failed to load profile data: ${formError.message}`);
@@ -231,19 +245,15 @@ const DashboardPage: React.FC = () => {
         setSessions(sessionsData || []);
       }
     } catch (error: any) {
-      if (mountedRef.current) {
-        setError(error.message || 'Failed to load dashboard data.');
-      }
+      setError(error.message || 'Failed to load dashboard data.');
     }
-  }, [userId]);
+  };
 
   useEffect(() => {
-    mountedRef.current = true;
-    fetchUserData();
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [fetchUserData]);
+    if (userId) {
+      fetchUserData();
+    }
+  }, [userId]);
 
   const sessionStats = React.useMemo(() => {
     const now = new Date();

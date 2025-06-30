@@ -19,9 +19,12 @@ function App() {
 }
 
 function AppContent() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
+  
+  console.log('🔍 App: Render - loading:', loading, 'user:', user?.email || 'none');
 
   if (loading) {
+    console.log('🔍 App: Showing loading screen');
     return (
       <div className="min-h-screen bg-background-primary flex items-center justify-center">
         <div className="text-center">
@@ -32,6 +35,7 @@ function AppContent() {
     );
   }
 
+  console.log('🔍 App: Rendering main content');
   return (
     <>
       <EmailVerificationHandler />
