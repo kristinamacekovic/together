@@ -38,11 +38,11 @@ const Footer: React.FC = () => {
               Product
             </h3>
             <ul className="space-y-3">
-              <li><a href="#how-it-works" className="text-text-secondary hover:text-experimental-pink transition-colors">How It Works</a></li>
-              <li><a href="#features" className="text-text-secondary hover:text-experimental-pink transition-colors">Features</a></li>
-              <li><a href="#who-its-for" className="text-text-secondary hover:text-experimental-pink transition-colors">Who It's For</a></li>
-              <li><a href="#pricing" className="text-text-secondary hover:text-experimental-pink transition-colors">Pricing</a></li>
-              <li><a href="#faq" className="text-text-secondary hover:text-experimental-pink transition-colors">FAQ</a></li>
+              <li><a href="/#how-it-works" className="text-text-secondary hover:text-experimental-pink transition-colors">How It Works</a></li>
+              <li><a href="/#features" className="text-text-secondary hover:text-experimental-pink transition-colors">Features</a></li>
+              <li><a href="/#who-its-for" className="text-text-secondary hover:text-experimental-pink transition-colors">Who It's For</a></li>
+              <li><a href="/#pricing" className="text-text-secondary hover:text-experimental-pink transition-colors">Pricing</a></li>
+              <li><a href="/#faq" className="text-text-secondary hover:text-experimental-pink transition-colors">FAQ</a></li>
             </ul>
           </div>
         </div>

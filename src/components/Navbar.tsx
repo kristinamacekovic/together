@@ -37,19 +37,19 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
 
           {/* Desktop Navigation & Auth - positioned on the right */}
           <div className="hidden md:flex items-center space-x-6">
-            <a href="#how-it-works" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
+            <a href="/#how-it-works" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
               How It Works
             </a>
-            <a href="#features" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
+            <a href="/#features" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
               Features
             </a>
-            <a href="#who-its-for" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
+            <a href="/#who-its-for" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
               Who It's For
             </a>
-            <a href="#pricing" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
+            <a href="/#pricing" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
               Pricing
             </a>
-            <a href="#faq" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
+            <a href="/#faq" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium">
               FAQ
             </a>
 
@@ -93,19 +93,19 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
       {isMenuOpen && (
         <div className="md:hidden py-6 border-t border-surface-border/30">
           <div className="flex flex-col space-y-4 px-6">
-            <a href="#how-it-works" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
+            <a href="/#how-it-works" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
               How It Works
             </a>
-            <a href="#features" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
+            <a href="/#features" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
               Features
             </a>
-            <a href="#who-its-for" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
+            <a href="/#who-its-for" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
               Who It's For
             </a>
-            <a href="#pricing" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
+            <a href="/#pricing" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
               Pricing
             </a>
-            <a href="#faq" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
+            <a href="/#faq" className="text-text-tertiary hover:text-experimental-pink transition-colors font-medium py-2">
               FAQ
             </a>
             
