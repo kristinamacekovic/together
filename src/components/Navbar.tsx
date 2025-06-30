@@ -61,9 +61,9 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
             ) : (
               <button
                 onClick={onGetStartedClick}
-                className="flex items-center bg-experimental-faded-blue text-experimental-electric font-bold py-2 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors"
+                className="group flex items-center bg-experimental-faded-blue text-experimental-electric font-bold py-2 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors"
               >
-                <ArrowRight className="w-5 h-5 mr-2" />
+                <ArrowRight className="w-5 h-5 mr-2 transition-transform duration-200 group-hover:translate-x-1" />
                 Focus
               </button>
             )}
@@ -123,9 +123,9 @@ export default function Navbar({ onGetStartedClick }: NavbarProps) {
               <div className="pt-4 border-t border-surface-border/30">
                 <button
                   onClick={onGetStartedClick}
-                  className="w-full flex justify-center items-center bg-experimental-faded-blue text-experimental-electric font-bold py-3 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors"
+                  className="group w-full flex justify-center items-center bg-experimental-faded-blue text-experimental-electric font-bold py-3 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors"
                 >
-                  <ArrowRight className="w-5 h-5 mr-2" />
+                  <ArrowRight className="w-5 h-5 mr-2 transition-transform duration-200 group-hover:translate-x-1" />
                   Focus
                 </button>
               </div>

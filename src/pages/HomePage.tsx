@@ -41,10 +41,10 @@ export function HomePage() {
               e.preventDefault();
               openAuthModal();
             }}
-            className="inline-flex items-center text-lg font-bold text-experimental-electric"
+            className="group inline-flex items-center text-lg font-bold text-experimental-electric"
           >
-            Start your free trial now{' '}
-            <ArrowRight className="ml-2 h-5 w-5" />
+            <ArrowRight className="mr-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
+            Start your free trial now
           </a>
         </div>
       </section>
