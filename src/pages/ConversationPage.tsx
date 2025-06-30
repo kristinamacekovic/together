@@ -50,12 +50,12 @@ const ConversationPage: React.FC = () => {
   useEffect(() => {
     if (!session) return;
 
-    const { status, created_at, ended_at } = session;
+    const { status, created_at, completed_at } = session;
 
     if (status === 'completed' || status === 'cancelled') {
-      if (ended_at) {
+      if (completed_at) {
         const start = new Date(created_at).getTime();
-        const end = new Date(ended_at).getTime();
+        const end = new Date(completed_at).getTime();
         setDisplayDuration(formatDuration(end - start));
       } else {
         // Fallback for ended sessions without an end time
@@ -81,6 +81,16 @@ const ConversationPage: React.FC = () => {
     const seconds = totalSeconds % 60;
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const formatMinutesToDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
   };
 
   const getStatusDisplay = () => {
@@ -214,9 +224,21 @@ const ConversationPage: React.FC = () => {
                    </div>
                  </div>
                  <div>
-                   <span className="text-text-secondary text-sm">Duration</span>
+                   <span className="text-text-secondary text-sm">Planned Duration</span>
                    <div className="text-text-primary font-medium mt-1">
-                     <span className="font-mono">{displayDuration}</span>
+                     {session?.planned_duration ? formatMinutesToDuration(session.planned_duration) : '25m'}
+                   </div>
+                 </div>
+                 <div>
+                   <span className="text-text-secondary text-sm">Actual Duration</span>
+                   <div className="text-text-primary font-medium mt-1">
+                     {session?.actual_duration ? (
+                       <span className="text-experimental-pink font-mono">
+                         {formatMinutesToDuration(session.actual_duration)}
+                       </span>
+                     ) : (
+                       <span className="font-mono">{displayDuration}</span>
+                     )}
                    </div>
                  </div>
                 <div>
