@@ -10,8 +10,7 @@ const ConversationPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [displayDuration, setDisplayDuration] = useState('00:00:00');
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -34,7 +33,6 @@ const ConversationPage: React.FC = () => {
 
         if (data) {
           setSession(data);
-          setSessionStartTime(new Date(data.created_at));
         } else {
           throw new Error('Session not found.');
         }
@@ -48,21 +46,39 @@ const ConversationPage: React.FC = () => {
     fetchSession();
   }, [sessionId]);
 
-  // Update current time every second for duration calculation
+  // Timer and duration logic
   useEffect(() => {
-    if (!sessionStartTime) return;
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [sessionStartTime]);
+    if (!session) return;
 
-  const formatDuration = (startTime: Date | null, currentTime: Date): string => {
-    if (!startTime) return '00:00:00';
-    const diffMs = currentTime.getTime() - startTime.getTime();
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    const { status, created_at, ended_at } = session;
+
+    if (status === 'completed' || status === 'cancelled') {
+      if (ended_at) {
+        const start = new Date(created_at).getTime();
+        const end = new Date(ended_at).getTime();
+        setDisplayDuration(formatDuration(end - start));
+      } else {
+        // Fallback for ended sessions without an end time
+        setDisplayDuration('Finished');
+      }
+      return; // Stop here, no timer needed
+    }
+
+    // For active sessions, set up a running timer
+    const startTime = new Date(created_at).getTime();
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      setDisplayDuration(formatDuration(now - startTime));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [session]);
+
+  const formatDuration = (milliseconds: number): string => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
@@ -200,7 +216,7 @@ const ConversationPage: React.FC = () => {
                  <div>
                    <span className="text-text-secondary text-sm">Duration</span>
                    <div className="text-text-primary font-medium mt-1">
-                     <span className="font-mono">{formatDuration(sessionStartTime, currentTime)}</span>
+                     <span className="font-mono">{displayDuration}</span>
                    </div>
                  </div>
                 <div>

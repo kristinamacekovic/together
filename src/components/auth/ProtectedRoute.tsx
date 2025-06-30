@@ -7,12 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
-
-  // Do not render anything until the auth state is confirmed
-  if (loading) {
-    return null;
-  }
+  const { user } = useAuth();
 
   // If auth is done and there's no user, redirect to home
   if (!user) {

@@ -174,3 +174,7 @@
     animation: slide-down 0.3s ease-out;
   }
 }
+
+details[open] .details-arrow {
+  transform: rotate(90deg);
+}
