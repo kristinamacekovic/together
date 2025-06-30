@@ -1,5 +1,5 @@
 import React from 'react';
-import { Twitter, Github, Mail } from 'lucide-react';
+import { Twitter, Mail } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -20,13 +20,10 @@ const Footer: React.FC = () => {
               Your AI accountability partner, available 24/7. Get distraction-free focus sessions adapted to your goals and energy levels.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-text-muted hover:text-experimental-pink transition-colors">
+              <a href="https://x.com/kika__chu" className="text-text-muted hover:text-experimental-pink transition-colors">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="text-text-muted hover:text-experimental-pink transition-colors">
-                <Github className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-text-muted hover:text-experimental-pink transition-colors">
+              <a href="mailto:kristinamacekovic@icloud.com" className="text-text-muted hover:text-experimental-pink transition-colors">
                 <Mail className="h-5 w-5" />
               </a>
             </div>
