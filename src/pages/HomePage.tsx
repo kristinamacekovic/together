@@ -1,5 +1,6 @@
 import { ArrowRight, CheckCircle, Zap, BrainCircuit, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 const Section = ({ children, className = '', id }: { children: React.ReactNode; className?: string, id?: string }) => (
   <section id={id} className={`py-16 md:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${className}`}>
@@ -15,6 +16,23 @@ const SectionHeader = ({ children }: { children: React.ReactNode }) => (
 
 export function HomePage() {
   const { openAuthModal } = useAuth();
+
+  // Handle anchor scrolling when page loads with hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      // Small delay to ensure the page is fully rendered
+      setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100);
+    }
+  }, []);
 
   return (
     <div className="bg-background-primary text-text-primary min-h-screen">
