@@ -195,7 +195,7 @@ export function HomePage() {
         <div className="mt-8">
           <button
             onClick={openAuthModal}
-            className="rounded-lg bg-black px-8 py-4 text-lg font-bold text-white"
+            className="rounded-lg bg-experimental-electric px-8 py-4 text-lg font-bold text-background-primary"
           >
             Start your free trial
           </button>
