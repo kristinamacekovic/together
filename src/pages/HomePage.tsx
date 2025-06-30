@@ -27,13 +27,13 @@ export function HomePage() {
 
         <div className="mb-8 lg:mb-12">
           <h2 className="font-black text-experimental-pink uppercase tracking-tight leading-tight text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
-            Your AI Accountability Partner - Available 24/7, No Video Calls Required
+            Your AI Accountability Partner - Available 24/7
           </h2>
         </div>
 
         <div className="max-w-2xl">
           <p className="text-xl text-text-tertiary mb-10">
-          Instantly start distraction-free focus sessions with an AI agent that adapts to your goals, energy levels, and work style. Our "body doubling app" provides the presence of a partner to help you focus.
+          Instantly start distraction-free focus sessions with an AI agent that adapts to you. Our "body doubling app" provides the presence of a partner to help you focus, when and how you need it.
           </p>
           <a
             href="#"
@@ -44,7 +44,7 @@ export function HomePage() {
             className="group inline-flex items-center text-lg font-bold text-experimental-electric"
           >
             <ArrowRight className="mr-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-1" />
-            Start your free trial now
+            Start free today
           </a>
         </div>
       </section>
@@ -58,7 +58,7 @@ export function HomePage() {
             <p className="text-lg text-text-tertiary">These are the pain points we solve.</p>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-experimental-pink mb-4">FocusTogether's AI agents provide consistent, judgment-free support that learns your:</h3>
+            <h3 className="text-2xl font-bold text-experimental-pink mb-4">Together's AI agents provide consistent, judgment-free support that learns your:</h3>
             <ul className="space-y-3">
               {['Work/study patterns', 'Energy fluctuations', 'Project requirements', 'Personal productivity blockers'].map(item => (
                 <li key={item} className="flex items-start">
@@ -74,12 +74,11 @@ export function HomePage() {
       {/* How It Works Section */}
       <Section id="how-it-works">
         <SectionHeader>Your Personalized Focus Session in 20 Seconds</SectionHeader>
-        <div className="grid md:grid-cols-4 gap-8 text-center">
+        <div className="grid md:grid-cols-3 gap-8 text-center">
           {[
             { title: "Set Context", description: "Tell your AI agent about your task, focus level, and goals" },
             { title: "Session Launch", description: "Start an on-demand session anytime - no scheduling needed" },
-            { title: "Adaptive Support", description: "AI adjusts check-ins based on your progress and focus metrics" },
-            { title: "Review Insights", description: "Get session analytics and improvement tips afterward" }
+            { title: "Adaptive Support", description: "AI adjusts check-ins based on your progress and focus metrics" }
           ].map((step, index) => (
             <div key={step.title} className="bg-surface-elevated p-6 rounded-lg shadow-elegant-lg transition-transform hover:-translate-y-2">
               <div className="text-5xl font-black text-experimental-pink mb-4">0{index + 1}</div>
@@ -92,7 +91,7 @@ export function HomePage() {
 
       {/* Key Features Section */}
       <Section id="features">
-        <SectionHeader>Why 10,000+ Users Choose Our AI Partners</SectionHeader>
+        <SectionHeader>Why Users Choose Our AI Partners</SectionHeader>
         <div className="max-w-4xl mx-auto">
           <table className="w-full text-left">
             <thead>
@@ -105,7 +104,6 @@ export function HomePage() {
               {[
                 { feature: "Context-Aware Sessions", benefit: "AI remembers your projects and learning style" },
                 { feature: "Energy-Level Matching", benefit: "Adapts interaction frequency to your current focus" },
-                { feature: "Progress Prediction", benefit: "Forecasts completion times based on your history" },
                 { feature: "Zero-Video Privacy", benefit: "Full accountability without camera anxiety" },
                 { feature: "ADHD Focus Session", benefit: "Tailored for neurodivergent minds to enhance productivity" }
               ].map(({feature, benefit}) => (
@@ -126,7 +124,7 @@ export function HomePage() {
           {[
             { icon: <BrainCircuit className="w-12 h-12 mx-auto text-experimental-pink mb-4" />, title: "For ADHD Professionals", points: ["Detect focus drift in real-time", "Break tasks into micro-sessions", "Celebrate small wins with dopamine-triggering feedback"] },
             { icon: <Users className="w-12 h-12 mx-auto text-experimental-pink mb-4" />, title: "For Remote Workers", points: ["Virtual 'coworker' presence", "Meeting-prep focus boosts", "Deep work mode scheduling"] },
-            { icon: <Zap className="w-12 h-12 mx-auto text-experimental-pink mb-4" />, title: "For Students", points: ["Adapt to your course load", "Simulate library accountability", "Predict exam prep timelines"] }
+            { icon: <Zap className="w-12 h-12 mx-auto text-experimental-pink mb-4" />, title: "For Students", points: ["Adapt to your interests", "Simulate library accountability", "Practice for exams"] }
           ].map(({icon, title, points}) => (
             <div key={title} className="bg-surface-elevated p-8 rounded-lg shadow-elegant-xl">
               {icon}
@@ -161,12 +159,12 @@ export function HomePage() {
             </div>
           ))}
         </div>
-        <p className="text-center mt-8 text-text-tertiary">7-day free trial - cancel anytime</p>
+        {/*<p className="text-center mt-8 text-text-tertiary">7-day free trial - cancel anytime</p>
         <div className="flex justify-center items-center gap-4 mt-4 text-sm text-text-muted">
           <ShieldCheck className="w-5 h-5"/><span>SOC2 Compliant</span>
           <span>•</span>
           <ShieldCheck className="w-5 h-5"/><span>Data Encrypted</span>
-        </div>
+        </div>*/}
       </Section>
 
       {/* FAQ Section */}
@@ -174,7 +172,7 @@ export function HomePage() {
         <SectionHeader>Frequently Asked Questions</SectionHeader>
         <div className="max-w-3xl mx-auto space-y-6">
           {[
-            { q: "How does AI differ from human partners?", a: "Our agents never cancel, adapt to your energy in real-time, and provide data-driven insights human partners can't." },
+            { q: "How does AI differ from human partners?", a: "Our agents never cancel, adapt to your energy in real-time, and are able to hold a conversation in any topic of your need." },
             { q: "Can it replace my therapist/ADHD coach?", a: "No. This is a productivity tool, not a medical one. It's designed to complement, not replace, professional support systems." }
           ].map(({ q, a }) => (
             <details key={q} className="bg-surface-elevated rounded-lg p-6 cursor-pointer">
@@ -191,13 +189,13 @@ export function HomePage() {
       {/* Final CTA */}
       <Section className="text-center">
         <h2 className="text-4xl md:text-5xl font-bold text-experimental-pink mb-6">Ready for Guilt-Free Productivity?</h2>
-        <p className="text-xl text-text-tertiary max-w-2xl mx-auto mb-8">Stop fighting distractions. Start your free trial and get an AI partner that finally gets you.</p>
+        <p className="text-xl text-text-tertiary max-w-2xl mx-auto mb-8">Stop fighting distractions. Start free today with a partner that finally gets you.</p>
         <div className="mt-8">
           <button
             onClick={openAuthModal}
             className="rounded-lg bg-experimental-electric px-8 py-4 text-lg font-bold text-background-primary"
           >
-            Start your free trial
+            Focus Together
           </button>
         </div>
       </Section>
