@@ -132,7 +132,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-surface-secondary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
+                      className="w-full pl-10 pr-4 py-3 bg-background-primary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
                       placeholder="Enter your full name"
                       required
                     />
@@ -150,7 +150,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-surface-secondary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
+                    className="w-full pl-10 pr-4 py-3 bg-background-primary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
                     placeholder="Enter your email"
                     required
                   />
@@ -167,7 +167,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-surface-secondary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
+                    className="w-full pl-10 pr-12 py-3 bg-background-primary border border-surface-border rounded-lg focus:border-experimental-electric focus:ring-1 focus:ring-experimental-electric outline-none transition-colors text-text-primary"
                     placeholder="Enter your password"
                     required
                   />
@@ -190,7 +190,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode = 's
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-experimental-faded-blue text-white font-bold py-3 px-4 rounded-lg hover:bg-experimental-blue-hover transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-experimental-electric text-black font-bold py-3 px-4 rounded-lg hover:bg-experimental-electric-hover transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
